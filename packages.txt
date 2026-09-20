@@ -20,3 +20,4 @@ tesseract-ocr-vie
 tesseract-ocr-ind
 tesseract-ocr-pol
 tesseract-ocr-swe
+libreoffice
