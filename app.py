@@ -76,6 +76,13 @@ TOOL_META = {
 }
 
 
+def init_state():
+    if "selected_tab" not in st.session_state:
+        st.session_state.selected_tab = "All Workflows"
+
+    if "theme" not in st.session_state:
+        st.session_state.theme = "dark"
+
 def inject_css():
     st.markdown(
         """
@@ -235,9 +242,11 @@ def inject_css():
     )
 
 
-def init_state():
-    if "selected_tab" not in st.session_state:
-        st.session_state.selected_tab = "All Workflows"
+
+
+
+
+
 
 
 def create_docx(text: str) -> bytes:
