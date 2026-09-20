@@ -1,7 +1,7 @@
 streamlit
 pdfplumber
 pytesseract
-pdf2image
-pillow
+Pillow
 python-docx
 PyPDF2
+gTTS
