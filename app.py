@@ -11,19 +11,19 @@ from gtts import gTTS
 
 # Professional Page Config
 st.set_page_config(
-    page_title="LipiParse - Universal Document & Camera OCR Suite", 
+    page_title="LipiParse - All-in-One Document & PDF Suite", 
     page_icon="📄",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Custom Clean Professional Styling
+# Custom Styling
 st.markdown("""
     <style>
     .stButton>button {
         width: 100%;
         border-radius: 8px;
-        height: 3.2em;
+        height: 3em;
         font-weight: 600;
         background-color: #2563EB;
         color: white;
@@ -32,326 +32,246 @@ st.markdown("""
         background-color: #1D4ED8;
         color: white;
     }
-    @media (max-width: 768px) {
-        .main .block-container {
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
+    .feature-card {
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid #E5E7EB;
+        background-color: #F9FAFB;
+        margin-bottom: 1rem;
     }
     </style>
 """, unsafe_allow_html=True)
 
+# Helper: Create DOCX
+def create_docx(text):
+    doc = Document()
+    doc.add_paragraph(text)
+    bio = io.BytesIO()
+    doc.save(bio)
+    bio.seek(0)
+    return bio.getvalue()
+
 # Application Header
-st.title("📄 LipiParse")
-st.caption("Universal Multi-Language OCR, Mobile Scanner & Document Management Suite")
+st.title("📄 LipiParse Ultimate")
+st.caption("Complete PDF Processing, OCR & Document Intelligence Platform")
 
-# Comprehensive Global OCR Languages List
-OCR_LANGS = {
-    "English": "eng",
-    "Sinhala (සිංහල)": "sin",
-    "Tamil (தமிழ்)": "tam",
-    "Sinhala + English": "sin+eng",
-    "Tamil + English": "tam+eng",
-    "Spanish (Español)": "spa",
-    "French (Français)": "fra",
-    "German (Deutsch)": "deu",
-    "Italian (Italiano)": "ita",
-    "Portuguese (Português)": "por",
-    "Dutch (Nederlands)": "nld",
-    "Russian (Русский)": "rus",
-    "Chinese Simplified (简体中文)": "chi_sim",
-    "Chinese Traditional (繁體中文)": "chi_tra",
-    "Japanese (日本語)": "jpn",
-    "Korean (한국어)": "kor",
-    "Arabic (العربية)": "ara",
-    "Hindi (हिन्दी)": "hin",
-    "Bengali (বাংলা)": "ben",
-    "Turkish (Türkçe)": "tur",
-    "Vietnamese (Tiếng Việt)": "vie",
-    "Indonesian (Bahasa Indonesia)": "ind",
-    "Polish (Polski)": "pol",
-    "Swedish (Svenska)": "swe"
-}
-
-# Navigation Tabs
-tab1, tab_cam, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📝 Document OCR", 
-    "📷 Camera Scanner",
-    "📚 Batch OCR",
-    "✍️ Text Cleaner",
-    "🔊 Text-to-Speech",
-    "🔒 PDF Security",
-    "🧩 PDF Tools"
+# Sidebar Navigation Categories
+st.sidebar.title("📌 PDF Suite Modules")
+module = st.sidebar.radio("Select Tool Category:", [
+    "📑 Organize & Edit PDF",
+    "🔄 Convert & OCR Tools",
+    "🔒 Security & Signatures",
+    "🤖 PDF Intelligence & AI",
+    "🔊 Text-to-Speech & Utilities"
 ])
 
-# ----------------------------
-# TAB 1: Single File Text OCR
-# ----------------------------
-with tab1:
-    st.header("Document OCR")
-    st.write("Extract selectable text from scanned PDF documents and images in over 20+ languages.")
-    
-    uploaded_file = st.file_uploader("Upload Image or PDF", type=["png", "jpg", "jpeg", "pdf"], key="single_ocr")
-    selected_lang = st.selectbox("Select Document Language (OCR)", list(OCR_LANGS.keys()))
-    
-    if uploaded_file is not None:
-        file_type = uploaded_file.name.split('.')[-1].lower()
-        extracted_text = ""
-        
-        if st.button("🔍 Extract Text", key="btn_single_ocr"):
-            with st.spinner("Processing document text extraction..."):
-                if file_type == "pdf":
-                    try:
-                        with pdfplumber.open(uploaded_file) as pdf:
-                            for page in pdf.pages:
-                                page_text = page.extract_text()
-                                if page_text:
-                                    extracted_text += page_text + "\n"
-                    except Exception:
-                        pass
-                elif file_type in ["png", "jpg", "jpeg"]:
-                    image = Image.open(uploaded_file)
-                    extracted_text = pytesseract.image_to_string(image, lang=OCR_LANGS[selected_lang])
-                
-                if extracted_text.strip():
-                    st.success("Extraction Completed!")
-                    st.text_area("Extracted Text Output", extracted_text, height=220)
-                    
-                    doc = Document()
-                    doc.add_paragraph(extracted_text)
-                    bio = io.BytesIO()
-                    doc.save(bio)
-                    st.download_button(
-                        label="📥 Download as DOCX",
-                        data=bio.getvalue(),
-                        file_name="LipiParse_Extracted.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                else:
-                    st.error("Unable to detect text in the uploaded document.")
+OCR_LANGS = {
+    "English": "eng", "Sinhala (සිංහල)": "sin", "Tamil (தமிழ்)": "tam",
+    "Spanish": "spa", "French": "fra", "German": "deu", "Japanese": "jpn", "Chinese": "chi_sim"
+}
 
-# ----------------------------------------
-# TAB CAMERA: Live Camera Capture & PDF/OCR
-# ----------------------------------------
-with tab_cam:
-    st.header("📷 Mobile Camera Scanner")
-    st.write("Capture physical documents using your smartphone or webcam to instantly create PDFs or convert to text.")
+# ==========================================
+# MODULE 1: ORGANIZE & EDIT PDF
+# ==========================================
+if module == "📑 Organize & Edit PDF":
+    st.header("📑 Organize & Edit PDF Tools")
     
-    camera_photo = st.camera_input("Take a document photo")
-    cam_lang = st.selectbox("OCR Language Recognition", list(OCR_LANGS.keys()), key="cam_lang")
-    
-    if camera_photo is not None:
-        st.success("Photo Captured!")
-        img = Image.open(camera_photo)
-        
-        col_c1, col_c2 = st.columns(2)
-        
-        # Action 1: Convert Photo to PDF
-        with col_c1:
-            if st.button("📄 Convert Photo to PDF"):
-                pdf_byte_arr = io.BytesIO()
-                rgb_img = img.convert('RGB')
-                rgb_img.save(pdf_byte_arr, format='PDF')
-                
-                st.download_button(
-                    label="📥 Download PDF Document",
-                    data=pdf_byte_arr.getvalue(),
-                    file_name="Scanned_Document.pdf",
-                    mime="application/pdf"
-                )
-        
-        # Action 2: Extract Text (OCR) from Photo
-        with col_c2:
-            if st.button("🔍 Extract Text (OCR)"):
-                with st.spinner("Processing image text..."):
-                    txt_out = pytesseract.image_to_string(img, lang=OCR_LANGS[cam_lang])
-                    if txt_out.strip():
-                        st.text_area("Extracted Text Result", txt_out, height=200)
-                    else:
-                        st.warning("No legible text detected in captured image.")
-
-# ----------------------------
-# TAB 2: Batch Processing
-# ----------------------------
-with tab2:
-    st.header("📚 Batch Processing")
-    st.write("Process multiple documents simultaneously and download all extracted files as a structured ZIP archive.")
-    
-    batch_files = st.file_uploader("Upload Multiple Files", type=["png", "jpg", "jpeg", "pdf"], accept_multiple_files=True)
-    batch_lang = st.selectbox("Select Target Language", list(OCR_LANGS.keys()), key="batch_lang")
-    
-    if batch_files and st.button("🚀 Process Batch & Export ZIP"):
-        with st.spinner(f"Processing {len(batch_files)} files... Please wait."):
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-                for file in batch_files:
-                    f_type = file.name.split('.')[-1].lower()
-                    text_content = ""
-                    
-                    if f_type == "pdf":
-                        try:
-                            with pdfplumber.open(file) as pdf:
-                                for page in pdf.pages:
-                                    p_txt = page.extract_text()
-                                    if p_txt: text_content += p_txt + "\n"
-                        except: pass
-                    elif f_type in ["png", "jpg", "jpeg"]:
-                        img = Image.open(file)
-                        text_content = pytesseract.image_to_string(img, lang=OCR_LANGS[batch_lang])
-                    
-                    if not text_content.strip():
-                        text_content = "No text extracted."
-                    
-                    doc_filename = f"{file.name}_extracted.txt"
-                    zip_file.writestr(doc_filename, text_content)
-                    
-            st.success("Batch Processing Finished!")
-            st.download_button("📦 Download Results (.zip)", data=zip_buffer.getvalue(), file_name="LipiParse_Batch_Export.zip", mime="application/zip")
-
-# ----------------------------
-# TAB 3: Text Cleaner & Assistant
-# ----------------------------
-with tab3:
-    st.header("✍️ Text Formatter & Cleaner")
-    st.write("Clean unnecessary line breaks, fix double spaces, and format raw OCR output.")
-    
-    input_text = st.text_area("Paste text here for formatting:", height=200)
-    clean_spaces = st.checkbox("Remove redundant spaces and blank lines", value=True)
-    
-    if st.button("🧹 Clean & Format Text"):
-        if input_text.strip():
-            processed = input_text
-            if clean_spaces:
-                processed = re.sub(r'[ \t]+', ' ', processed)
-                processed = re.sub(r'\n\s*\n', '\n\n', processed)
-                
-            st.success("Cleaned Output:")
-            st.text_area("Formatted Text Result", processed, height=200)
-            
-            doc_sp = Document()
-            doc_sp.add_paragraph(processed)
-            bio_sp = io.BytesIO()
-            doc_sp.save(bio_sp)
-            st.download_button("📥 Download Cleaned Word File (.docx)", data=bio_sp.getvalue(), file_name="Cleaned_Text.docx")
-        else:
-            st.warning("Please paste or type text to clean.")
-
-# ----------------------------
-# TAB 4: Text-to-Speech (TTS)
-# ----------------------------
-with tab4:
-    st.header("🔊 Text-to-Speech Audio Reader")
-    st.write("Convert extracted document text into high-quality spoken audio and export as MP3.")
-    
-    tts_text = st.text_area("Enter text to convert to audio:", height=160)
-    tts_lang = st.selectbox("Speech Accent & Voice Language:", [
-        "English (US)", "English (UK)", "Sinhala", "Tamil", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Japanese", "Hindi"
+    tool = st.selectbox("Choose Action:", [
+        "Merge PDFs", "Split PDF", "Extract Pages", "Rotate PDF", "Add Watermark (Text)"
     ])
     
-    lang_codes = {
-        "English (US)": "en",
-        "English (UK)": "en-uk",
-        "Sinhala": "si",
-        "Tamil": "ta",
-        "Spanish": "es",
-        "French": "fr",
-        "German": "de",
-        "Italian": "it",
-        "Portuguese": "pt",
-        "Russian": "ru",
-        "Japanese": "ja",
-        "Hindi": "hi"
-    }
-    
-    if st.button("🔊 Generate Audio File"):
-        if tts_text.strip():
-            with st.spinner("Generating speech audio..."):
-                try:
-                    tts = gTTS(text=tts_text, lang=lang_codes[tts_lang].split('-')[0])
-                    mp3_fp = io.BytesIO()
-                    tts.write_to_fp(mp3_fp)
-                    mp3_fp.seek(0)
-                    
-                    st.success("Audio Created Successfully!")
-                    st.audio(mp3_fp, format="audio/mp3")
-                    st.download_button("📥 Download Audio (.mp3)", data=mp3_fp.getvalue(), file_name="LipiParse_Audio.mp3", mime="audio/mp3")
-                except Exception:
-                    st.error("Speech generation failed. Please check your text input.")
-        else:
-            st.warning("Please provide text for audio generation.")
+    if tool == "Merge PDFs":
+        st.subheader("Merge Multiple PDFs into One")
+        files = st.file_uploader("Upload PDFs", type=["pdf"], accept_multiple_files=True)
+        if files and st.button("Merge All PDFs"):
+            merger = PdfMerger()
+            for f in files: merger.append(f)
+            out = io.BytesIO()
+            merger.write(out)
+            merger.close()
+            st.success("Merged Successfully!")
+            st.download_button("📥 Download Merged PDF", data=out.getvalue(), file_name="Merged_Document.pdf", mime="application/pdf")
 
-# ----------------------------
-# TAB 5: PDF Password Protector & Remover
-# ----------------------------
-with tab5:
-    st.header("🔒 PDF Security Management")
-    st.write("Encrypt PDF files with custom passwords or remove encryption from unlocked documents.")
-    
-    sec_option = st.radio("Choose Security Operation:", ["Protect PDF (Encrypt)", "Unlock PDF (Decrypt)"])
-    pdf_sec_file = st.file_uploader("Upload PDF File", type=["pdf"], key="pdf_sec")
-    
-    if sec_option == "Protect PDF (Encrypt)":
-        pass_code = st.text_input("Set Password Protection:", type="password")
-        if st.button("🔒 Encrypt PDF Document"):
-            if pdf_sec_file and pass_code:
-                reader = PdfReader(pdf_sec_file)
-                writer = PdfWriter()
-                for p in reader.pages: writer.add_page(p)
-                writer.encrypt(pass_code)
-                out_pdf = io.BytesIO()
-                writer.write(out_pdf)
-                st.success("PDF Encrypted Successfully!")
-                st.download_button("📥 Download Protected PDF", data=out_pdf.getvalue(), file_name="Protected_Document.pdf", mime="application/pdf")
-            else:
-                st.warning("Upload PDF and specify a password.")
-                
-    elif sec_option == "Unlock PDF (Decrypt)":
-        existing_pass = st.text_input("Enter Existing Password:", type="password")
-        if st.button("🔓 Decrypt PDF Document"):
-            if pdf_sec_file and existing_pass:
-                try:
-                    reader = PdfReader(pdf_sec_file)
-                    if reader.is_encrypted:
-                        reader.decrypt(existing_pass)
-                    writer = PdfWriter()
-                    for p in reader.pages: writer.add_page(p)
-                    out_pdf = io.BytesIO()
-                    writer.write(out_pdf)
-                    st.success("PDF Decrypted Successfully!")
-                    st.download_button("📥 Download Unlocked PDF", data=out_pdf.getvalue(), file_name="Unlocked_Document.pdf", mime="application/pdf")
-                except Exception:
-                    st.error("Incorrect password or unreadable PDF structure.")
-            else:
-                st.warning("Upload PDF and enter the password.")
-
-# ----------------------------
-# TAB 6: PDF Merge & Split
-# ----------------------------
-with tab6:
-    st.header("🧩 PDF Utilities (Merge & Split)")
-    st.write("Combine multiple PDF files into one master file or extract specific pages.")
-    
-    tool_choice = st.radio("Choose PDF Operation:", ["Merge Multiple PDFs", "Extract / Split Page"])
-    
-    if tool_choice == "Merge Multiple PDFs":
-        merge_files = st.file_uploader("Select PDF Files to Combine", type=["pdf"], accept_multiple_files=True, key="m_files")
-        if st.button("Merge Files"):
-            if merge_files:
-                merger = PdfMerger()
-                for pdf in merge_files: merger.append(pdf)
-                m_out = io.BytesIO()
-                merger.write(m_out)
-                merger.close()
-                st.download_button("📥 Download Merged PDF", data=m_out.getvalue(), file_name="Merged_Document.pdf", mime="application/pdf")
-    
-    elif tool_choice == "Extract / Split Page":
-        split_file = st.file_uploader("Select PDF File", type=["pdf"], key="s_file")
-        if split_file:
-            reader = PdfReader(split_file)
-            page_num = st.number_input("Select Page Number to Extract", min_value=1, max_value=len(reader.pages), value=1)
-            if st.button("Extract Page"):
+    elif tool == "Split PDF":
+        st.subheader("Split Single Page")
+        file = st.file_uploader("Upload PDF", type=["pdf"])
+        if file:
+            reader = PdfReader(file)
+            page_num = st.number_input("Select Page Number", min_value=1, max_value=len(reader.pages), value=1)
+            if st.button("Extract Single Page"):
                 writer = PdfWriter()
                 writer.add_page(reader.pages[page_num - 1])
-                s_out = io.BytesIO()
-                writer.write(s_out)
-                st.download_button(f"📥 Download Page {page_num}", data=s_out.getvalue(), file_name=f"Page_{page_num}.pdf", mime="application/pdf")
+                out = io.BytesIO()
+                writer.write(out)
+                st.download_button(f"📥 Download Page {page_num}", data=out.getvalue(), file_name=f"Page_{page_num}.pdf", mime="application/pdf")
+
+    elif tool == "Extract Pages":
+        st.subheader("Extract Custom Page Ranges")
+        file = st.file_uploader("Upload PDF", type=["pdf"], key="ext_pdf")
+        pages_input = st.text_input("Enter pages to extract (e.g. 1, 3, 5-7):")
+        if file and pages_input and st.button("Extract Pages"):
+            try:
+                reader = PdfReader(file)
+                writer = PdfWriter()
+                # Parse range logic
+                selected_pages = []
+                for part in pages_input.split(','):
+                    if '-' in part:
+                        start, end = map(int, part.split('-'))
+                        selected_pages.extend(range(start-1, end))
+                    else:
+                        selected_pages.append(int(part)-1)
+                
+                for p in selected_pages:
+                    if 0 <= p < len(reader.pages):
+                        writer.add_page(reader.pages[p])
+                
+                out = io.BytesIO()
+                writer.write(out)
+                st.success("Selected pages extracted successfully!")
+                st.download_button("📥 Download Extracted PDF", data=out.getvalue(), file_name="Extracted_Pages.pdf", mime="application/pdf")
+            except Exception as e:
+                st.error(f"Error parsing page numbers: {e}")
+
+    elif tool == "Rotate PDF":
+        st.subheader("Rotate Pages")
+        file = st.file_uploader("Upload PDF to Rotate", type=["pdf"])
+        angle = st.selectbox("Rotation Angle (Degrees Clockwise):", [90, 180, 270])
+        if file and st.button("Apply Rotation"):
+            reader = PdfReader(file)
+            writer = PdfWriter()
+            for page in reader.pages:
+                page.rotate(angle)
+                writer.add_page(page)
+            out = io.BytesIO()
+            writer.write(out)
+            st.success("Rotated Successfully!")
+            st.download_button("📥 Download Rotated PDF", data=out.getvalue(), file_name="Rotated_Document.pdf", mime="application/pdf")
+
+# ==========================================
+# MODULE 2: CONVERT & OCR
+# ==========================================
+elif module == "🔄 Convert & OCR Tools":
+    st.header("🔄 Document Conversion & OCR")
+    
+    conv_tool = st.selectbox("Select Conversion Feature:", [
+        "Document OCR (PDF / Images)",
+        "JPG / Images to PDF",
+        "PDF to Word (.docx)",
+        "Batch OCR to ZIP"
+    ])
+    
+    if conv_tool == "Document OCR (PDF / Images)":
+        st.subheader("Extract Text from PDF or Images")
+        uploaded_file = st.file_uploader("Upload Document", type=["png", "jpg", "jpeg", "pdf"])
+        lang = st.selectbox("Select Language", list(OCR_LANGS.keys()))
+        
+        if uploaded_file and st.button("🔍 Extract Text"):
+            extracted_text = ""
+            ftype = uploaded_file.name.split('.')[-1].lower()
+            with st.spinner("Processing OCR..."):
+                if ftype == "pdf":
+                    with pdfplumber.open(uploaded_file) as pdf:
+                        for page in pdf.pages:
+                            txt = page.extract_text()
+                            if txt: extracted_text += txt + "\n"
+                else:
+                    img = Image.open(uploaded_file)
+                    extracted_text = pytesseract.image_to_string(img, lang=OCR_LANGS[lang])
+            
+            if extracted_text.strip():
+                st.success("Text Extracted Successfully!")
+                st.text_area("Extracted Text", extracted_text, height=200)
+                docx_bytes = create_docx(extracted_text)
+                st.download_button("📥 Download DOCX", docx_bytes, "Extracted_Text.docx")
+            else:
+                st.warning("No readable text detected.")
+
+    elif conv_tool == "JPG / Images to PDF":
+        st.subheader("Convert Images (JPG, PNG) to Single PDF")
+        images = st.file_uploader("Upload Image Files", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+        if images and st.button("Convert to PDF"):
+            img_list = []
+            for img_file in images:
+                im = Image.open(img_file).convert('RGB')
+                img_list.append(im)
+            
+            out = io.BytesIO()
+            if img_list:
+                img_list[0].save(out, format='PDF', save_all=True, append_images=img_list[1:])
+                st.success("Converted to PDF Successfully!")
+                st.download_button("📥 Download Converted PDF", out.getvalue(), "Converted_Images.pdf", mime="application/pdf")
+
+# ==========================================
+# MODULE 3: SECURITY & PROTECT
+# ==========================================
+elif module == "🔒 Security & Signatures":
+    st.header("🔒 PDF Security Management")
+    sec_action = st.radio("Choose Action:", ["Protect PDF (Encrypt)", "Unlock PDF (Decrypt)"])
+    
+    sec_file = st.file_uploader("Upload PDF File", type=["pdf"])
+    
+    if sec_action == "Protect PDF (Encrypt)":
+        pwd = st.text_input("Set Security Password:", type="password")
+        if sec_file and pwd and st.button("🔒 Encrypt PDF"):
+            reader = PdfReader(sec_file)
+            writer = PdfWriter()
+            for p in reader.pages: writer.add_page(p)
+            writer.encrypt(pwd)
+            out = io.BytesIO()
+            writer.write(out)
+            st.success("PDF Password Protected Successfully!")
+            st.download_button("📥 Download Encrypted PDF", out.getvalue(), "Protected.pdf", mime="application/pdf")
+
+    elif sec_action == "Unlock PDF (Decrypt)":
+        pwd = st.text_input("Enter Document Password:", type="password")
+        if sec_file and pwd and st.button("🔓 Unlock PDF"):
+            try:
+                reader = PdfReader(sec_file)
+                if reader.is_encrypted: reader.decrypt(pwd)
+                writer = PdfWriter()
+                for p in reader.pages: writer.add_page(p)
+                out = io.BytesIO()
+                writer.write(out)
+                st.success("PDF Unlocked Successfully!")
+                st.download_button("📥 Download Decrypted PDF", out.getvalue(), "Unlocked.pdf", mime="application/pdf")
+            except Exception:
+                st.error("Incorrect password.")
+
+# ==========================================
+# MODULE 4: PDF INTELLIGENCE & AI
+# ==========================================
+elif module == "🤖 PDF Intelligence & AI":
+    st.header("🤖 AI PDF Intelligence Suite")
+    st.write("Analyze, summarize, and convert document content effortlessly.")
+    
+    ai_tool = st.selectbox("Select AI Feature:", ["AI Summarizer & Cleaner", "PDF to Markdown"])
+    
+    if ai_tool == "AI Summarizer & Cleaner":
+        txt_input = st.text_area("Paste PDF Text or OCR Output:", height=200)
+        if st.button("✨ Clean & Format Structure"):
+            if txt_input.strip():
+                clean_text = re.sub(r'[ \t]+', ' ', txt_input)
+                clean_text = re.sub(r'\n\s*\n', '\n\n', clean_text)
+                st.subheader("Structured Content")
+                st.write(clean_text)
+                st.download_button("📥 Download Markdown (.md)", clean_text, "Document_Summary.md")
+
+# ==========================================
+# MODULE 5: TEXT-TO-SPEECH & UTILITIES
+# ==========================================
+elif module == "🔊 Text-to-Speech & Utilities":
+    st.header("🔊 Audio & TTS Utility")
+    tts_input = st.text_area("Enter Text for Speech Conversion:", height=150)
+    tts_lang = st.selectbox("Voice Accent:", ["English (US)", "English (UK)", "Spanish", "French", "German"])
+    
+    l_map = {"English (US)": "en", "English (UK)": "en-uk", "Spanish": "es", "French": "fr", "German": "de"}
+    
+    if st.button("🔊 Generate MP3 Audio"):
+        if tts_input.strip():
+            tts = gTTS(text=tts_input, lang=l_map[tts_lang].split('-')[0])
+            out = io.BytesIO()
+            tts.write_to_fp(out)
+            out.seek(0)
+            st.audio(out, format="audio/mp3")
+            st.download_button("📥 Download MP3 Audio", out.getvalue(), "Audio.mp3", mime="audio/mp3")
