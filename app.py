@@ -180,7 +180,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# --- TOP HORIZONTAL NAVIGATION BAR (TAB SYSTEM) ---
+# --- TOP HORIZONTAL NAVIGATION BAR ---
 nav_options = [
     "All Workflows", 
     "Organize PDF", 
@@ -211,24 +211,24 @@ if selected_tab == "All Workflows":
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown("#### <i class="fa-solid fa-folder-tree"></i> Organize & Structure", unsafe_allow_html=True)
+        st.markdown("#### <i class='fa-solid fa-folder-tree'></i> Organize & Structure", unsafe_allow_html=True)
         st.info("Merge multiple documents, split custom page ranges, rotate pages, and rearrange your PDF files.")
         
-        st.markdown("#### <i class="fa-solid fa-shield-halved"></i> Privacy & Protection", unsafe_allow_html=True)
+        st.markdown("#### <i class='fa-solid fa-shield-halved'></i> Privacy & Protection", unsafe_allow_html=True)
         st.info("Encrypt PDFs with password protection, remove restrictions, and secure confidential files.")
 
     with col2:
-        st.markdown("#### <i class="fa-solid fa-arrows-rotate"></i> Document OCR & Convert", unsafe_allow_html=True)
+        st.markdown("#### <i class='fa-solid fa-arrows-rotate'></i> Document OCR & Convert", unsafe_allow_html=True)
         st.info("Convert scanned PDFs and images to editable Word/TXT using multi-language OCR Engine.")
         
-        st.markdown("#### <i class="fa-solid fa-camera"></i> Mobile Camera Scanner", unsafe_allow_html=True)
+        st.markdown("#### <i class='fa-solid fa-camera'></i> Mobile Camera Scanner", unsafe_allow_html=True)
         st.info("Snap physical documents using your mobile phone camera and immediately convert them into clean PDFs.")
 
     with col3:
-        st.markdown("#### <i class="fa-solid fa-gauge-high"></i> PDF Optimization", unsafe_allow_html=True)
+        st.markdown("#### <i class='fa-solid fa-gauge-high'></i> PDF Optimization", unsafe_allow_html=True)
         st.info("Compress large files, clean document layout, and adjust DPI for fast web sharing.")
         
-        st.markdown("#### <i class="fa-solid fa-brain"></i> AI Intelligence & TTS", unsafe_allow_html=True)
+        st.markdown("#### <i class='fa-solid fa-brain'></i> AI Intelligence & TTS", unsafe_allow_html=True)
         st.info("Clean up raw extracted OCR text and convert text to high-quality audio speech (Text-To-Speech).")
 
 # ==========================================
@@ -238,7 +238,7 @@ elif selected_tab == "Organize PDF":
     st.markdown('<div class="category-title"><i class="fa-solid fa-folder-tree"></i> Organize PDF Tools</div>', unsafe_allow_html=True)
     
     st.markdown('<div class="tool-box">', unsafe_allow_html=True)
-    tool = st.tabs(["<i class='fa-solid fa-object-group'></i> Merge PDFs", "<i class='fa-solid fa-scissors'></i> Split PDF", "<i class='fa-solid fa-bookmark'></i> Extract Pages", "<i class='fa-solid fa-rotate-right'></i> Rotate PDF"])
+    tool = st.tabs(["Merge PDFs", "Split PDF", "Extract Pages", "Rotate PDF"])
     
     # Merge
     with tool[0]:
