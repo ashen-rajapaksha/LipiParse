@@ -21,3 +21,5 @@ tesseract-ocr-ind
 tesseract-ocr-pol
 tesseract-ocr-swe
 libreoffice
+libreoffice-core
+libreoffice-writer
