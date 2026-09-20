@@ -534,32 +534,110 @@ elif selected_tab == "PDF Intelligence":
 # FOOTER SECTION (ABOUT US, INVITE LINK & SOCIAL MEDIA)
 # ==========================================
 st.markdown("---")
-f_col1, f_col2, f_col3 = st.columns([1.5, 1, 1])
+
+# Custom Styling for Modern Blue Footer
+st.markdown("""
+    <style>
+    .custom-footer {
+        background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+        color: #E2E8F0;
+        padding: 2.5rem 2rem 1.5rem 2rem;
+        border-radius: 16px;
+        margin-top: 3rem;
+        box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.15);
+    }
+    .footer-heading {
+        color: #FFFFFF;
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-bottom: 0.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .footer-text {
+        font-size: 0.92rem;
+        line-height: 1.6;
+        color: #94A3B8;
+    }
+    .social-link-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #FFFFFF !important;
+        border-radius: 10px;
+        font-size: 1.2rem;
+        margin-right: 0.6rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    .social-link-btn:hover {
+        background-color: #2563EB;
+        color: #FFFFFF !important;
+        transform: translateY(-3px);
+    }
+    .footer-divider {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: 2rem;
+        padding-top: 1rem;
+        text-align: center;
+        font-size: 0.85rem;
+        color: #64748B;
+    }
+    .footer-link {
+        color: #38BDF8;
+        text-decoration: none;
+    }
+    .footer-link:hover {
+        text-decoration: underline;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Main Footer Structure
+st.markdown('<div class="custom-footer">', unsafe_allow_html=True)
+
+f_col1, f_col2, f_col3 = st.columns([1.4, 1.1, 1.1])
 
 with f_col1:
-    st.markdown("### ⚡ About LipiParse Studio")
-    st.write("LipiParse Studio යනු ඔබගේ සියලුම PDF සහ ලේඛන කටයුතු ආරක්ෂිතව, පහසුවෙන් සහ ඉක්මනින් ඉටු කරගැනීමට සකස් කරන ලද SaaS විසඳුමකි. සියලුම Processing ක්‍රියාවලීන් 100% Data Privacy සහිතව සිදුවේ.")
+    st.markdown('<div class="footer-heading"><i class="fa-solid fa-bolt" style="color: #38BDF8;"></i> LipiParse Studio</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <p class="footer-text">
+            All-in-one PDF & document processing studio. 
+            Convert, edit, OCR, compress, and secure files with <b>100% data privacy</b> and end-to-end security.
+        </p>
+    """, unsafe_allow_html=True)
 
 with f_col2:
-    st.markdown("### 🤝 Invite Friends")
-    st.caption("ඔබගේ යහළුවන්ටත් මෙම Tool එක Share කරන්න:")
+    st.markdown('<div class="footer-heading"><i class="fa-solid fa-share-nodes" style="color: #38BDF8;"></i> Share With Peers</div>', unsafe_allow_html=True)
+    st.markdown('<p class="footer-text">Share this workspace with your teammates and colleagues:</p>', unsafe_allow_html=True)
     invite_url = "https://lipiparse-studio.streamlit.app"
-    st.text_input("Invite Link", value=invite_url, key="invite_link_box")
+    st.text_input("Invite Link", value=invite_url, key="invite_link_box_clean", label_visibility="collapsed")
 
 with f_col3:
-    st.markdown("### 🌐 Connect With Us")
+    st.markdown('<div class="footer-heading"><i class="fa-solid fa-globe" style="color: #38BDF8;"></i> Connect With Us</div>', unsafe_allow_html=True)
+    st.markdown('<p class="footer-text">Follow us for product updates, feature releases, and support:</p>', unsafe_allow_html=True)
     st.markdown("""
-        <div class="social-icons" style="margin-top: 0.5rem;">
-            <a href="https://facebook.com" target="_blank"><i class="fa-brands fa-facebook"></i></a>
-            <a href="https://twitter.com" target="_blank"><i class="fa-brands fa-x-twitter"></i></a>
-            <a href="https://linkedin.com" target="_blank"><i class="fa-brands fa-linkedin"></i></a>
-            <a href="https://instagram.com" target="_blank"><i class="fa-brands fa-instagram"></i></a>
-            <a href="https://t.me" target="_blank"><i class="fa-brands fa-telegram"></i></a>
+        <div style="margin-top: 0.8rem;">
+            <a href="https://facebook.com" target="_blank" class="social-link-btn"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://twitter.com" target="_blank" class="social-link-btn"><i class="fa-brands fa-x-twitter"></i></a>
+            <a href="https://linkedin.com" target="_blank" class="social-link-btn"><i class="fa-brands fa-linkedin-in"></i></a>
+            <a href="https://instagram.com" target="_blank" class="social-link-btn"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://t.me" target="_blank" class="social-link-btn"><i class="fa-brands fa-telegram"></i></a>
         </div>
     """, unsafe_allow_html=True)
 
+# Copyright & Bottom Links
 st.markdown("""
-    <div style="text-align: center; color: #64748B; font-size: 0.85rem; margin-top: 2rem; border-top: 1px solid #E2E8F0; padding-top: 1rem;">
-        © 2026 LipiParse Studio SaaS Platform. All rights reserved. • <a href="#">Privacy Policy</a> • <a href="#">Terms of Service</a>
+    <div class="footer-divider">
+        © 2026 <b>LipiParse Studio</b> SaaS Platform. All rights reserved. <br>
+        <a href="#" class="footer-link">Privacy Policy</a> • 
+        <a href="#" class="footer-link">Terms of Service</a> • 
+        <a href="#" class="footer-link">Security Standard</a>
     </div>
 """, unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
