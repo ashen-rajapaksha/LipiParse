@@ -997,7 +997,6 @@ def render_footer():
         .lp-footer-text {
             color: #94a8bd;
             font-size: 13px;
-            line-height: 1.6;
             margin-bottom: 18px;
         }
 
@@ -1017,13 +1016,11 @@ def render_footer():
             border-radius: 10px;
             background: rgba(255, 255, 255, 0.03);
             font-size: 13px;
-            transition: 0.2s ease;
         }
 
         .lp-social a:hover {
-            border-color: rgba(125, 217, 255, 0.45);
             color: #7dd9ff;
-            background: rgba(125, 217, 255, 0.06);
+            border-color: rgba(125, 217, 255, 0.45);
         }
 
         .lp-share-btn {
@@ -1031,20 +1028,11 @@ def render_footer():
             margin: 8px 0 20px 0;
             padding: 11px 20px;
             border-radius: 12px;
-            background: linear-gradient(
-                135deg,
-                #1677ff,
-                #36c5ff
-            );
+            background: linear-gradient(135deg, #1677ff, #36c5ff);
             color: white !important;
             text-decoration: none !important;
             font-weight: 700;
             font-size: 13px;
-            box-shadow: 0 8px 25px rgba(22, 119, 255, 0.22);
-        }
-
-        .lp-share-btn:hover {
-            opacity: 0.9;
         }
 
         .lp-footer-contact {
