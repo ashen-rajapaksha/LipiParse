@@ -83,7 +83,6 @@ def init_state():
     if "theme" not in st.session_state:
         st.session_state.theme = "dark"
 
- def init_state():
     if "selected_tab" not in st.session_state:
         st.session_state.selected_tab = "All Workflows"
 
@@ -431,38 +430,6 @@ def clean_text(text: str):
 
 def render_header():
     st.markdown(
-st.markdown(
-    f"""
-    <div style="
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        gap:8px;
-        margin:8px 0 18px 0;
-        color:#94a8bd;
-        font-size:13px;
-    ">
-        <span style="
-            width:7px;
-            height:7px;
-            background:#39d98a;
-            border-radius:50%;
-            display:inline-block;
-            box-shadow:0 0 10px rgba(57,217,138,.6);
-        "></span>
-
-        <span>
-            <strong style="color:#eef6ff;">
-                {st.session_state.documents_processed:,}
-            </strong>
-            documents processed in this session
-        </span>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-
         """
         <div class="lp-brand">
             <div class="lp-logo">⚡</div>
@@ -470,6 +437,37 @@ st.markdown(
                 <div class="lp-brand-name">LipiParse Studio</div>
                 <div class="lp-brand-sub">Premium PDF & document workspace</div>
             </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
+        <div style="
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            gap:8px;
+            margin:8px 0 18px 0;
+            color:#94a8bd;
+            font-size:13px;
+        ">
+            <span style="
+                width:7px;
+                height:7px;
+                background:#39d98a;
+                border-radius:50%;
+                display:inline-block;
+                box-shadow:0 0 10px rgba(57,217,138,.6);
+            "></span>
+
+            <span>
+                <strong style="color:#eef6ff;">
+                    {st.session_state.documents_processed:,}
+                </strong>
+                documents processed in this session
+            </span>
         </div>
         """,
         unsafe_allow_html=True,
