@@ -933,7 +933,249 @@ def render_privacy():
         """,
         unsafe_allow_html=True,
     )
+def render_footer():
+    st.markdown(
+        """
+        <style>
+        .lp-footer {
+            margin-top: 50px;
+            padding: 30px 35px 20px 35px;
+            border-top: 1px solid rgba(125, 217, 255, 0.18);
+            background: linear-gradient(
+                180deg,
+                rgba(13, 27, 42, 0.85),
+                rgba(7, 17, 31, 0.98)
+            );
+            border-radius: 18px 18px 0 0;
+        }
 
+        .lp-footer-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+
+        .lp-footer-brand {
+            font-size: 22px;
+            font-weight: 800;
+            color: #eef6ff;
+            margin-bottom: 8px;
+        }
+
+        .lp-footer-description {
+            color: #94a8bd;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .lp-footer-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #7dd9ff;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+        }
+
+        .lp-footer-link {
+            display: block;
+            color: #b8c9d9 !important;
+            text-decoration: none !important;
+            font-size: 13px;
+            margin: 8px 0;
+            transition: 0.2s ease;
+        }
+
+        .lp-footer-link:hover {
+            color: #7dd9ff !important;
+            transform: translateX(3px);
+        }
+
+        .lp-share-btn {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: linear-gradient(
+                135deg,
+                #1677ff,
+                #7c4dff
+            );
+            color: white !important;
+            text-decoration: none !important;
+            font-size: 13px;
+            font-weight: 700;
+            margin-top: 3px;
+            transition: 0.2s ease;
+        }
+
+        .lp-share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(22, 119, 255, 0.25);
+        }
+
+        .lp-footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .lp-footer-copy {
+            color: #71869b;
+            font-size: 12px;
+        }
+
+        .lp-footer-policy {
+            color: #71869b !important;
+            text-decoration: none !important;
+            font-size: 12px;
+        }
+
+        .lp-footer-policy:hover {
+            color: #7dd9ff !important;
+        }
+
+        @media (max-width: 800px) {
+            .lp-footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 500px) {
+            .lp-footer-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .lp-footer {
+                padding: 25px 20px 18px 20px;
+            }
+        }
+        </style>
+
+        <footer class="lp-footer">
+
+            <div class="lp-footer-grid">
+
+                <!-- BRAND -->
+                <div>
+                    <div class="lp-footer-brand">
+                        LipiParse Studio
+                    </div>
+
+                    <div class="lp-footer-description">
+                        Premium PDF & document workspace for
+                        fast, simple and intelligent document processing.
+                    </div>
+                </div>
+
+
+                <!-- SOCIAL MEDIA -->
+                <div>
+                    <div class="lp-footer-title">
+                        Connect
+                    </div>
+
+                    <!-- ADD YOUR LINKS HERE -->
+                    <a class="lp-footer-link"
+                       href="YOUR_FACEBOOK_LINK"
+                       target="_blank">
+                        Facebook
+                    </a>
+
+                    <a class="lp-footer-link"
+                       href="YOUR_INSTAGRAM_LINK"
+                       target="_blank">
+                        Instagram
+                    </a>
+
+                    <a class="lp-footer-link"
+                       href="YOUR_LINKEDIN_LINK"
+                       target="_blank">
+                        LinkedIn
+                    </a>
+
+                    <a class="lp-footer-link"
+                       href="YOUR_GITHUB_LINK"
+                       target="_blank">
+                        GitHub
+                    </a>
+                </div>
+
+
+                <!-- CONTACT -->
+                <div>
+                    <div class="lp-footer-title">
+                        Contact
+                    </div>
+
+                    <!-- ADD YOUR EMAIL HERE -->
+                    <a class="lp-footer-link"
+                       href="mailto:YOUR_EMAIL@example.com">
+                        Email
+                    </a>
+
+                    <!-- ADD YOUR PHONE NUMBER HERE -->
+                    <a class="lp-footer-link"
+                       href="tel:+94XXXXXXXXX">
+                        Contact Number
+                    </a>
+                </div>
+
+
+                <!-- SHARE -->
+                <div>
+                    <div class="lp-footer-title">
+                        Share LipiParse
+                    </div>
+
+                    <div class="lp-footer-description"
+                         style="margin-bottom: 10px;">
+                        Invite others to use LipiParse Studio.
+                    </div>
+
+                    <a class="lp-share-btn"
+                       href="https://lipiparse-mcthmncr2jfncvym8kbxmw.streamlit.app/"
+                       target="_blank">
+                        Invite / Share LipiParse
+                    </a>
+                </div>
+
+            </div>
+
+
+            <!-- BOTTOM -->
+            <div class="lp-footer-bottom">
+
+                <div class="lp-footer-copy">
+                    © 2026 LipiParse Studio. All rights reserved.
+                </div>
+
+                <div>
+                    <a class="lp-footer-policy"
+                       href="#privacy-and-protection">
+                        Privacy & Protection
+                    </a>
+
+                    <span style="color:#52677c; margin:0 8px;">
+                        •
+                    </span>
+
+                    <a class="lp-footer-policy"
+                       href="#">
+                        Terms
+                    </a>
+                </div>
+
+            </div>
+
+        </footer>
+        """,
+        unsafe_allow_html=True
+    )
 
 def render_footer():
     st.markdown(
