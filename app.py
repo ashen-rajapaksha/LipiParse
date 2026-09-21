@@ -8,6 +8,7 @@ Run with:  streamlit run app.py
 import io
 import re
 import shutil
+import textwrap
 import subprocess
 import tempfile
 import zipfile
@@ -662,7 +663,7 @@ def strip_metadata(data: bytes, new_meta=None):
 # ==========================================================
 def render_brand():
     st.markdown(
-        f"""
+        textwrap.dedent(f"""\
         <div class="lp-brand">
             <div class="lp-logo">⚡</div>
             <div>
@@ -670,7 +671,7 @@ def render_brand():
                 <div class="lp-brand-sub">Premium PDF &amp; document workspace</div>
             </div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -722,20 +723,20 @@ def render_sidebar():
 def render_header():
     count = st.session_state.get("documents_processed", 0)
     st.markdown(
-        f"""
+        textwrap.dedent(f"""\
         <div style="text-align:center;margin:6px 0 18px 0;color:var(--lp-muted);font-size:13px;">
             <span style="color:#39d98a;font-size:11px;">●</span>
             <strong style="color:var(--lp-text);">{count:,}</strong>
             document{'' if count == 1 else 's'} processed in this session
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
 
 def render_hero():
     st.markdown(
-        """
+        textwrap.dedent("""\
         <div class="hero">
             <div class="hero-kicker">All-in-one document workspace</div>
             <div class="hero-title">Every PDF tool you need.<br>
@@ -749,14 +750,14 @@ def render_hero():
                 <span class="badge">📄 Office &amp; PDF tools</span>
             </div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
 
 def render_stats():
     st.markdown(
-        f"""
+        textwrap.dedent(f"""\
         <div class="stat-row">
             <div class="stat"><div class="stat-label">Workflows</div>
                 <div class="stat-value">{len(NAV_ORDER)} categories</div></div>
@@ -767,7 +768,7 @@ def render_stats():
             <div class="stat"><div class="stat-label">Session</div>
                 <div class="stat-value">No app database</div></div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -1684,7 +1685,7 @@ def render_privacy():
     st.markdown('<div class="section-copy">Understand exactly how this app handles uploaded '
                 'content.</div>', unsafe_allow_html=True)
     st.markdown(
-        """
+        textwrap.dedent("""\
         <div class="tool-panel">
             <h3 style="color:var(--lp-text)">Session-based processing</h3>
             <p style="color:var(--lp-muted);line-height:1.7">This app does not implement an
@@ -1708,7 +1709,7 @@ def render_privacy():
                     <div class="stat-value">External service</div></div>
             </div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -1748,32 +1749,32 @@ def render_footer():
         contact_bits.append(f"Contact: {CONTACT_PHONE}")
     contact_html = " &nbsp;•&nbsp; ".join(contact_bits)
 
-    st.markdown(
-        f"""
-        <div style="margin-top:50px;padding:30px;border-top:1px solid var(--lp-line);
-                    background:var(--lp-card);border-radius:18px 18px 0 0;text-align:center;">
-            <div style="font-size:20px;font-weight:700;color:var(--lp-text);margin-bottom:8px;">
-                ⚡ {APP_NAME}</div>
-            <div style="color:var(--lp-muted);font-size:13px;margin-bottom:18px;">
-                Premium PDF &amp; document workspace</div>
-            <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:18px 0;">
-                {links_html}
-            </div>
-            <a href="{SHARE_URL}" target="_blank"
-               style="display:inline-block;margin:8px 0 20px 0;padding:11px 20px;border-radius:12px;
-                      background:linear-gradient(135deg,#1677ff,#36c5ff);color:white;
-                      text-decoration:none;font-weight:700;font-size:13px;">
-                Invite / Share {APP_NAME}</a>
-            <div style="color:var(--lp-muted);font-size:12px;margin-top:8px;">{contact_html}</div>
-            <div style="margin-top:20px;padding-top:15px;border-top:1px solid var(--lp-line);
-                        color:var(--lp-muted);font-size:11px;">
-                ⚡ {APP_NAME} • Version {APP_VERSION}<br>
-                Built for fast everyday document workflows. © 2026
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    # NOTE: every line below starts at column 0 (no leading spaces). If HTML
+    # passed to st.markdown has 4+ leading spaces on its first line, Streamlit's
+    # markdown parser treats it as a code block and prints the raw tags as text
+    # instead of rendering them — that was the "falling text" bug in the footer.
+    footer_html = (
+        '<div style="margin-top:50px;padding:30px;border-top:1px solid var(--lp-line);'
+        'background:var(--lp-card);border-radius:18px 18px 0 0;text-align:center;">'
+        f'<div style="font-size:20px;font-weight:700;color:var(--lp-text);margin-bottom:8px;">'
+        f'⚡ {APP_NAME}</div>'
+        '<div style="color:var(--lp-muted);font-size:13px;margin-bottom:18px;">'
+        'Premium PDF &amp; document workspace</div>'
+        '<div style="display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:18px 0;">'
+        f'{links_html}</div>'
+        f'<a href="{SHARE_URL}" target="_blank" '
+        'style="display:inline-block;margin:8px 0 20px 0;padding:11px 20px;border-radius:12px;'
+        'background:linear-gradient(135deg,#1677ff,#36c5ff);color:white;'
+        'text-decoration:none;font-weight:700;font-size:13px;">'
+        f'Invite / Share {APP_NAME}</a>'
+        f'<div style="color:var(--lp-muted);font-size:12px;margin-top:8px;">{contact_html}</div>'
+        '<div style="margin-top:20px;padding-top:15px;border-top:1px solid var(--lp-line);'
+        'color:var(--lp-muted);font-size:11px;">'
+        f'⚡ {APP_NAME} • Version {APP_VERSION}<br>'
+        'Built for fast everyday document workflows. © 2026</div>'
+        '</div>'
     )
+    st.markdown(footer_html, unsafe_allow_html=True)
 
 
 # ==========================================================
