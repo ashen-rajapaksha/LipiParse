@@ -973,10 +973,9 @@ def render_privacy():
 def render_footer():
     st.markdown(
         """
-        <style>
-        .lp-footer {
+        <div style="
             margin-top: 50px;
-            padding: 30px 35px 20px 35px;
+            padding: 30px;
             border-top: 1px solid rgba(125, 217, 255, 0.18);
             background: linear-gradient(
                 180deg,
@@ -985,126 +984,130 @@ def render_footer():
             );
             border-radius: 18px 18px 0 0;
             text-align: center;
-        }
+        ">
 
-        .lp-footer-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #eef6ff;
-            margin-bottom: 8px;
-        }
-
-        .lp-footer-text {
-            color: #94a8bd;
-            font-size: 13px;
-            margin-bottom: 18px;
-        }
-
-        .lp-social {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 18px 0;
-        }
-
-        .lp-social a {
-            color: #b9d8ef;
-            text-decoration: none;
-            padding: 8px 14px;
-            border: 1px solid rgba(125, 217, 255, 0.16);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            font-size: 13px;
-        }
-
-        .lp-social a:hover {
-            color: #7dd9ff;
-            border-color: rgba(125, 217, 255, 0.45);
-        }
-
-        .lp-share-btn {
-            display: inline-block;
-            margin: 8px 0 20px 0;
-            padding: 11px 20px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #1677ff, #36c5ff);
-            color: white !important;
-            text-decoration: none !important;
-            font-weight: 700;
-            font-size: 13px;
-        }
-
-        .lp-footer-contact {
-            color: #94a8bd;
-            font-size: 12px;
-            margin-top: 8px;
-        }
-
-        .lp-footer-bottom {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(125, 217, 255, 0.10);
-            color: #6f8499;
-            font-size: 11px;
-        }
-        </style>
-
-        <footer class="lp-footer">
-
-            <div class="lp-footer-title">
+            <div style="
+                font-size: 20px;
+                font-weight: 700;
+                color: #eef6ff;
+                margin-bottom: 8px;
+            ">
                 ⚡ LipiParse Studio
             </div>
 
-            <div class="lp-footer-text">
+            <div style="
+                color: #94a8bd;
+                font-size: 13px;
+                margin-bottom: 18px;
+            ">
                 Premium PDF & document workspace
             </div>
 
-            <div class="lp-social">
-                <a href="YOUR_FACEBOOK_LINK" target="_blank">
+            <div style="
+                display: flex;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin: 18px 0;
+            ">
+
+                <a href="YOUR_FACEBOOK_LINK"
+                   target="_blank"
+                   style="
+                       color:#b9d8ef;
+                       text-decoration:none;
+                       padding:8px 14px;
+                       border:1px solid rgba(125,217,255,0.16);
+                       border-radius:10px;
+                       font-size:13px;
+                   ">
                     Facebook
                 </a>
 
-                <a href="YOUR_INSTAGRAM_LINK" target="_blank">
+                <a href="YOUR_INSTAGRAM_LINK"
+                   target="_blank"
+                   style="
+                       color:#b9d8ef;
+                       text-decoration:none;
+                       padding:8px 14px;
+                       border:1px solid rgba(125,217,255,0.16);
+                       border-radius:10px;
+                       font-size:13px;
+                   ">
                     Instagram
                 </a>
 
-                <a href="YOUR_LINKEDIN_LINK" target="_blank">
+                <a href="YOUR_LINKEDIN_LINK"
+                   target="_blank"
+                   style="
+                       color:#b9d8ef;
+                       text-decoration:none;
+                       padding:8px 14px;
+                       border:1px solid rgba(125,217,255,0.16);
+                       border-radius:10px;
+                       font-size:13px;
+                   ">
                     LinkedIn
                 </a>
 
-                <a href="YOUR_GITHUB_LINK" target="_blank">
+                <a href="YOUR_GITHUB_LINK"
+                   target="_blank"
+                   style="
+                       color:#b9d8ef;
+                       text-decoration:none;
+                       padding:8px 14px;
+                       border:1px solid rgba(125,217,255,0.16);
+                       border-radius:10px;
+                       font-size:13px;
+                   ">
                     GitHub
                 </a>
+
             </div>
 
-            <a
-                class="lp-share-btn"
-                href="https://lipiparse-mcthmncr2jfncvym8kbxmw.streamlit.app/"
-                target="_blank"
-            >
+            <a href="https://lipiparse-mcthmncr2jfncvym8kbxmw.streamlit.app/"
+               target="_blank"
+               style="
+                   display:inline-block;
+                   margin:8px 0 20px 0;
+                   padding:11px 20px;
+                   border-radius:12px;
+                   background:linear-gradient(135deg,#1677ff,#36c5ff);
+                   color:white;
+                   text-decoration:none;
+                   font-weight:700;
+                   font-size:13px;
+               ">
                 Invite / Share LipiParse
             </a>
 
-            <div class="lp-footer-contact">
+            <div style="
+                color:#94a8bd;
+                font-size:12px;
+                margin-top:8px;
+            ">
                 Email: YOUR_EMAIL@example.com
                 &nbsp; • &nbsp;
                 Contact: +94XXXXXXXXX
             </div>
 
-            <div class="lp-footer-bottom">
+            <div style="
+                margin-top:20px;
+                padding-top:15px;
+                border-top:1px solid rgba(125,217,255,0.10);
+                color:#6f8499;
+                font-size:11px;
+            ">
                 ⚡ LipiParse Studio • Premium PDF & document workspace
                 • Version 2.0
                 <br>
                 Built for fast everyday document workflows. © 2026
             </div>
 
-        </footer>
+        </div>
         """,
         unsafe_allow_html=True,
     )
-
-
 
 # ==========================================================
 # RENDER APP
