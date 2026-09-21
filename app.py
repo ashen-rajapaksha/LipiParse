@@ -442,32 +442,26 @@ def render_header():
         unsafe_allow_html=True,
     )
 
+    count = st.session_state.get("documents_processed", 0)
+
     st.markdown(
         f"""
         <div style="
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            gap:8px;
-            margin:8px 0 18px 0;
+            text-align:center;
+            margin:10px 0 20px 0;
             color:#94a8bd;
             font-size:13px;
         ">
             <span style="
-                width:7px;
-                height:7px;
-                background:#39d98a;
-                border-radius:50%;
-                display:inline-block;
-                box-shadow:0 0 10px rgba(57,217,138,.6);
-            "></span>
+                color:#39d98a;
+                font-size:11px;
+            ">●</span>
 
-            <span>
-                <strong style="color:#eef6ff;">
-                    {st.session_state.documents_processed:,}
-                </strong>
-                documents processed in this session
-            </span>
+            <strong style="color:#eef6ff;">
+                {count:,}
+            </strong>
+
+            documents processed in this session
         </div>
         """,
         unsafe_allow_html=True,
