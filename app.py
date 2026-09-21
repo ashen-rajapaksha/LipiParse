@@ -1777,6 +1777,26 @@ def render_footer():
     st.markdown(footer_html, unsafe_allow_html=True)
 
 
+def render_breadcrumb(active_tab: str):
+    """Shown instead of the hero/stats block once a specific tool is open,
+    so the person lands straight on that tool's options instead of scrolling
+    past dashboard-only content."""
+    icon, blurb = TOOL_META.get(active_tab, ("⌘", ""))
+    left, right = st.columns([5, 1])
+    with left:
+        st.markdown(
+            f"<div style='color:var(--lp-muted);font-size:.85rem;margin-bottom:.2rem;'>"
+            f"All Workflows / <span style='color:var(--lp-text);font-weight:700;'>"
+            f"{icon} {active_tab}</span></div>"
+            f"<div style='color:var(--lp-muted);font-size:.82rem;margin-bottom:.8rem;'>{blurb}</div>",
+            unsafe_allow_html=True,
+        )
+    with right:
+        if st.button("← All tools", key="breadcrumb_back", use_container_width=True):
+            st.session_state.selected_tab = "All Workflows"
+            st.rerun()
+
+
 # ==========================================================
 # RENDER APP
 # ==========================================================
@@ -1785,8 +1805,18 @@ inject_css()
 render_sidebar()
 render_brand()
 render_header()
-render_hero()
-render_stats()
+
+selected_tab = st.session_state.selected_tab
+
+# BUGFIX/UX: the hero banner and stat cards are dashboard-only content. They
+# used to render above every tool page, forcing an extra scroll before
+# reaching that tool's actual options. Now they only show on "All Workflows";
+# any specific tool goes straight to its options behind a small breadcrumb.
+if selected_tab == "All Workflows":
+    render_hero()
+    render_stats()
+else:
+    render_breadcrumb(selected_tab)
 
 ROUTES = {
     "All Workflows": render_all_workflows,
@@ -1800,6 +1830,6 @@ ROUTES = {
     "Data Privacy": render_privacy,
 }
 
-ROUTES.get(st.session_state.selected_tab, render_all_workflows)()
+ROUTES.get(selected_tab, render_all_workflows)()
 
 render_footer()
