@@ -345,6 +345,16 @@ div[data-testid="stDownloadButton"] > button:hover {
     background:var(--lp-card); border:1px dashed var(--lp-line); border-radius:16px;
 }
 
+/* Hide Streamlit's built-in chrome (hamburger menu, Deploy button, footer)
+   so the app reads as a standalone premium product rather than a Streamlit
+   demo. The header itself is kept (not display:none) so the sidebar
+   collapse arrow keeps working — only made transparent. */
+[data-testid="stHeader"] { background: transparent; height: 2.6rem; }
+[data-testid="stToolbar"] { visibility: hidden; }
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+[data-testid="stDecoration"] { display: none; }
+
 @media (max-width: 800px) {
     .stat-row { grid-template-columns:repeat(2,1fr); }
     .hero { padding:1.6rem; }
@@ -724,10 +734,15 @@ def render_header():
     count = st.session_state.get("documents_processed", 0)
     st.markdown(
         textwrap.dedent(f"""\
-        <div style="text-align:center;margin:6px 0 18px 0;color:var(--lp-muted);font-size:13px;">
-            <span style="color:#39d98a;font-size:11px;">●</span>
-            <strong style="color:var(--lp-text);">{count:,}</strong>
-            document{'' if count == 1 else 's'} processed in this session
+        <div style="display:flex;align-items:center;justify-content:center;gap:9px;
+                    margin:2px auto 18px auto;padding:8px 20px;border-radius:999px;
+                    border:1px solid var(--lp-line);background:var(--lp-card);
+                    width:fit-content;box-shadow:0 8px 26px rgba(0,0,0,.14);">
+            <span style="width:8px;height:8px;border-radius:50%;background:#39d98a;
+                        box-shadow:0 0 10px #39d98a;flex-shrink:0;"></span>
+            <span style="color:var(--lp-text);font-size:13px;font-weight:800;">{count:,}</span>
+            <span style="color:var(--lp-muted);font-size:13px;">
+                document{'' if count == 1 else 's'} processed this session</span>
         </div>
         """),
         unsafe_allow_html=True,
@@ -842,14 +857,14 @@ def render_convert():
     st.markdown('<div class="section-title">Convert PDF</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Convert to PDF, convert from PDF, run OCR, '
                 'or scan straight from your camera.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["To PDF", "From PDF", "OCR Extractor", "Batch OCR", "Camera Scanner"])
+    tabs = st.tabs(["⬆️ To PDF", "⬇️ From PDF", "🔎 OCR Extractor", "❑ Batch OCR", "📷 Camera Scanner"])
 
     # ---------------- To PDF ----------------
     with tabs[0]:
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            st.markdown("#### JPG / PNG → PDF")
+            st.markdown("#### 🖼️ JPG / PNG → 📄 PDF")
             images = st.file_uploader("Upload image files", type=["png", "jpg", "jpeg", "webp"],
                                       accept_multiple_files=True, key="img_to_pdf")
             page_fit = st.checkbox("Fit every image to A4", value=False, key="img_a4")
@@ -877,7 +892,7 @@ def render_convert():
             render_result("img2pdf", "Download PDF")
 
             st.markdown("---")
-            st.markdown("#### PowerPoint → PDF")
+            st.markdown("#### 📽️ PowerPoint → 📄 PDF")
             ppt_file = st.file_uploader("Upload PPT / PPTX", type=["ppt", "pptx"], key="ppt_to_pdf")
             if ppt_file and st.button("Convert PowerPoint", key="convert_ppt", use_container_width=True):
                 size_guard(ppt_file)
@@ -891,7 +906,7 @@ def render_convert():
             render_result("ppt2pdf", "Download PDF")
 
         with c2:
-            st.markdown("#### Word → PDF")
+            st.markdown("#### 📝 Word → 📄 PDF")
             doc_file = st.file_uploader("Upload Word file", type=["docx", "doc", "odt", "rtf", "txt"],
                                         key="doc_to_pdf")
             if doc_file and st.button("Convert Word", key="convert_word", use_container_width=True):
@@ -906,7 +921,7 @@ def render_convert():
             render_result("doc2pdf", "Download PDF")
 
             st.markdown("---")
-            st.markdown("#### Excel → PDF")
+            st.markdown("#### 📊 Excel → 📄 PDF")
             xls_file = st.file_uploader("Upload Excel sheet", type=["xls", "xlsx", "csv", "ods"],
                                         key="xls_to_pdf")
             if xls_file and st.button("Convert Excel", key="convert_excel", use_container_width=True):
@@ -921,7 +936,7 @@ def render_convert():
             render_result("xls2pdf", "Download PDF")
 
         with c3:
-            st.markdown("#### HTML → PDF")
+            st.markdown("#### 🌐 HTML → 📄 PDF")
             html_input = st.text_area("Paste HTML code", height=180, key="html_to_pdf")
             if html_input.strip() and st.button("Convert HTML", key="convert_html",
                                                 use_container_width=True):
@@ -934,7 +949,7 @@ def render_convert():
             render_result("html2pdf", "Download PDF")
 
             st.markdown("---")
-            st.markdown("#### Plain text → PDF")
+            st.markdown("#### 📃 Plain text → 📄 PDF")
             txt_input = st.text_area("Paste any text", height=150, key="txt_to_pdf")
             if txt_input.strip() and st.button("Convert Text", key="convert_txt",
                                                use_container_width=True):
@@ -957,7 +972,7 @@ def render_convert():
         c1, c2 = st.columns(2)
 
         with c1:
-            st.markdown("#### PDF → Images")
+            st.markdown("#### 📄 PDF → 🖼️ Images")
             pdf_img_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_jpg")
             fmt = st.radio("Image format", ["JPEG", "PNG"], horizontal=True, key="img_fmt")
             dpi = st.select_slider("Resolution (DPI)", options=[72, 110, 150, 200, 300],
@@ -974,7 +989,7 @@ def render_convert():
             render_result("pdf2img", "Download image ZIP")
 
             st.markdown("---")
-            st.markdown("#### PDF → Word")
+            st.markdown("#### 📄 PDF → 📝 Word")
             pdf_word_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_word")
             if pdf_word_file and st.button("Convert PDF to DOCX", key="pdf_word_btn",
                                            use_container_width=True):
@@ -991,7 +1006,7 @@ def render_convert():
             render_result("pdf2docx", "Download DOCX")
 
         with c2:
-            st.markdown("#### PDF → Excel (tables)")
+            st.markdown("#### 📄 PDF → 📊 Excel (tables)")
             pdf_xls_file = st.file_uploader("Upload PDF with tables", type=["pdf"], key="pdf_to_xls")
             if pdf_xls_file and st.button("Extract Tables", key="pdf_xls_btn",
                                           use_container_width=True):
@@ -1005,7 +1020,7 @@ def render_convert():
             render_result("pdf2xlsx", "Download XLSX")
 
             st.markdown("---")
-            st.markdown("#### PDF → Plain text")
+            st.markdown("#### 📄 PDF → 📃 Plain text")
             pdf_txt_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_txt")
             if pdf_txt_file and st.button("Extract Text File", key="pdf_txt_btn",
                                           use_container_width=True):
@@ -1070,7 +1085,7 @@ def render_convert():
 
     # ---------------- Batch OCR ----------------
     with tabs[3]:
-        st.markdown("#### Run OCR on several files at once")
+        st.markdown("#### 🔎 Run OCR on several files at once")
         batch_files = st.file_uploader("Upload images or PDFs",
                                        type=["png", "jpg", "jpeg", "webp", "pdf"],
                                        accept_multiple_files=True, key="batch_ocr_files")
@@ -1105,7 +1120,7 @@ def render_convert():
 
     # ---------------- Camera ----------------
     with tabs[4]:
-        st.markdown("#### Camera document scanner")
+        st.markdown("#### 📷 Camera document scanner")
         cam_photo = st.camera_input("Take a picture")
         if cam_photo:
             img = Image.open(as_stream(cam_photo)).convert("RGB")
@@ -1128,7 +1143,7 @@ def render_organize():
     st.markdown('<div class="section-title">Organize PDF</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Control document structure without leaving '
                 'the workspace.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["Merge", "Split", "Extract Pages", "Delete Pages", "Reorder", "Rotate"])
+    tabs = st.tabs(["🔗 Merge", "✂️ Split", "📑 Extract Pages", "🗑️ Delete Pages", "🔀 Reorder", "↻ Rotate"])
 
     # ---- Merge ----
     with tabs[0]:
@@ -1365,7 +1380,7 @@ def render_edit():
         st.error("The annotation engine is unavailable because reportlab is not installed.")
         return
 
-    tabs = st.tabs(["Watermark & labels", "Page numbers"])
+    tabs = st.tabs(["💧 Watermark & labels", "🔢 Page numbers"])
 
     with tabs[0]:
         file = st.file_uploader("Upload PDF", type=["pdf"], key="edit_pdf_file")
@@ -1426,7 +1441,7 @@ def render_security():
     st.markdown('<div class="section-title">PDF Security</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Protect or unlock PDFs with a password you '
                 'control.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["Encrypt PDF", "Decrypt PDF"])
+    tabs = st.tabs(["🔒 Encrypt PDF", "🔓 Decrypt PDF"])
 
     with tabs[0]:
         sec_file = st.file_uploader("Upload PDF", type=["pdf"], key="sec_encrypt")
@@ -1506,7 +1521,7 @@ def render_intelligence():
     st.markdown('<div class="section-title">PDF Intelligence</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Clean extracted text, measure it, and generate '
                 'speech from your content.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["Clean OCR Text", "Text Analysis", "Find & Replace", "Text-to-Speech"])
+    tabs = st.tabs(["🧹 Clean OCR Text", "📊 Text Analysis", "🔍 Find & Replace", "🔊 Text-to-Speech"])
 
     with tabs[0]:
         raw_text = st.text_area("Paste raw OCR text", height=220, key="clean_raw")
@@ -1635,14 +1650,14 @@ def render_inspector():
     for col, (label, value) in zip(cols, info.items()):
         col.metric(label, value)
 
-    st.markdown("#### Embedded metadata")
+    st.markdown("#### 🏷️ Embedded metadata")
     if meta:
         for label, value in meta.items():
             st.markdown(f"**{label}:** {value}")
     else:
         st.caption("No document metadata found (or the file is encrypted).")
 
-    st.markdown("#### Page dimensions")
+    st.markdown("#### 📐 Page dimensions")
     try:
         reader = PdfReader(io.BytesIO(data))
         if not reader.is_encrypted:
@@ -1656,7 +1671,7 @@ def render_inspector():
         pass
 
     st.markdown("---")
-    st.markdown("#### Clean metadata")
+    st.markdown("#### 🧹 Clean metadata")
     col_a, col_b = st.columns(2)
     with col_a:
         new_title = st.text_input("New title (optional)", key="meta_title")
@@ -1713,7 +1728,7 @@ def render_privacy():
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### Runtime status")
+    st.markdown("#### ⚙️ Runtime status")
     checks = {
         "LibreOffice (Office → PDF)": bool(get_soffice()),
         "reportlab (watermarks, page numbers)": REPORTLAB_AVAILABLE,
