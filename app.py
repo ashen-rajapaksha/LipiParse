@@ -5,10 +5,12 @@ Version 2.1  (bug-fixed + expanded toolset)
 Run with:  streamlit run app.py
 """
 
+import difflib
 import io
 import re
 import shutil
 import textwrap
+from html import escape as html_escape
 import subprocess
 import tempfile
 import zipfile
@@ -16,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pdfplumber
 import pytesseract
 from PIL import Image, ImageOps, ImageEnhance
@@ -64,6 +67,9 @@ st.set_page_config(
 APP_NAME = "LipiParse Studio"
 APP_VERSION = "2.1"
 MAX_UPLOAD_MB = 60          # soft warning threshold
+HARD_MAX_UPLOAD_MB = 80     # hard block — protects the shared free-tier runtime
+MAX_BATCH_FILES = 15        # cap on batch OCR file count per run
+MAX_SESSION_ACTIONS = 60    # cap on heavy actions per browser session
 SHARE_URL = "https://lipiparse-mcthmncr2jfncvym8kbxmw.streamlit.app/"
 
 # --- Edit these once and the footer updates itself. Leave "" to hide a link ---
@@ -121,9 +127,26 @@ TOOL_META = {
     "PDF Intelligence": ("✦", "Clean OCR text, analyse it, and turn text into audio."),
     "Document Inspector": ("◍", "Inspect metadata and strip hidden document info."),
     "Data Privacy": ("✓", "See how files are handled and what leaves the app."),
+    "Privacy Policy": ("⚖", "Plain-language privacy notice and terms of use."),
 }
 
 NAV_ORDER = list(TOOL_META.keys())
+
+# Font Awesome classes for the same tools, used only where Streamlit renders
+# raw HTML (dashboard cards, breadcrumb) — st.button/st.tabs never render
+# HTML, so the sidebar nav above keeps the plain Unicode glyphs instead.
+TOOL_ICON_FA = {
+    "All Workflows": "fa-solid fa-table-cells-large",
+    "Convert PDF": "fa-solid fa-arrows-rotate",
+    "Organize PDF": "fa-solid fa-layer-group",
+    "Optimize PDF": "fa-solid fa-compress",
+    "Edit PDF": "fa-solid fa-pen-to-square",
+    "PDF Security": "fa-solid fa-lock",
+    "PDF Intelligence": "fa-solid fa-wand-magic-sparkles",
+    "Document Inspector": "fa-solid fa-magnifying-glass",
+    "Data Privacy": "fa-solid fa-shield-halved",
+    "Privacy Policy": "fa-solid fa-file-contract",
+}
 
 
 # ==========================================================
@@ -191,10 +214,32 @@ def as_stream(uploaded) -> io.BytesIO:
 
 
 def size_guard(uploaded) -> bool:
+    """Warn above the soft threshold; hard-block above the hard threshold.
+    Returns False when the caller should stop processing this file."""
     mb = len(uploaded.getvalue()) / (1024 * 1024)
+    if mb > HARD_MAX_UPLOAD_MB:
+        st.error(f"This file is {mb:.1f} MB, which is above the {HARD_MAX_UPLOAD_MB} MB "
+                 f"limit for this free shared service. Please compress it first or "
+                 f"split it into smaller parts.")
+        return False
     if mb > MAX_UPLOAD_MB:
         st.warning(f"This file is {mb:.1f} MB. Files above {MAX_UPLOAD_MB} MB may "
-                   f"time out on a shared Streamlit runtime.")
+                   f"be slow on a shared free-tier runtime.")
+    return True
+
+
+def rate_limit_ok() -> bool:
+    """Simple per-session abuse guard for a login-free public tool. Once a
+    single browser session crosses MAX_SESSION_ACTIONS heavy actions, further
+    processing is politely refused so one visitor can't starve everyone else
+    on the shared free runtime. Resets when the tab/session ends."""
+    if st.session_state.get("documents_processed", 0) >= MAX_SESSION_ACTIONS:
+        st.error(
+            f"You've reached the {MAX_SESSION_ACTIONS}-action limit for a single "
+            f"session on this free service. Please refresh the page to start a new "
+            f"session, or come back a little later."
+        )
+        return False
     return True
 
 
@@ -345,15 +390,40 @@ div[data-testid="stDownloadButton"] > button:hover {
     background:var(--lp-card); border:1px dashed var(--lp-line); border-radius:16px;
 }
 
+.diff-box {
+    max-height:420px; overflow-y:auto; border:1px solid var(--lp-line); border-radius:14px;
+    background:var(--lp-input-bg); font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12.5px; line-height:1.55; padding:.6rem 0;
+}
+.diff-row { padding:1px 14px; white-space:pre-wrap; word-break:break-word; }
+.diff-add { background:rgba(53,211,154,.14); color:#1f8f66; }
+.diff-del { background:rgba(255,90,90,.13); color:#c14545; text-decoration:line-through; }
+.diff-same { color:var(--lp-muted); }
+
+.subhead {
+    display:flex; align-items:center; gap:.5rem; font-weight:800; font-size:1.02rem;
+    color:var(--lp-text); margin:.9rem 0 .55rem 0;
+}
+.subhead i { color:var(--lp-blue); font-size:.95rem; width:1.1rem; text-align:center; }
+.card-icon i { color:var(--lp-blue); }
+.hero-badges i { margin-right:.4rem; color:var(--lp-cyan); }
+.lp-logo i { color:white; font-size:1.15rem; }
+
 /* Hide Streamlit's built-in chrome (hamburger menu, Deploy button, footer)
    so the app reads as a standalone premium product rather than a Streamlit
    demo. The header itself is kept (not display:none) so the sidebar
    collapse arrow keeps working — only made transparent. */
-[data-testid="stHeader"] { background: transparent; height: 2.6rem; }
+[data-testid="stHeader"] { background: transparent; }
 [data-testid="stToolbar"] { visibility: hidden; }
 #MainMenu { visibility: hidden; }
 footer { visibility: hidden; }
 [data-testid="stDecoration"] { display: none; }
+/* The sidebar's own open/collapse arrow must stay visible and clickable no
+   matter what — it lives outside stToolbar/#MainMenu, but this rule is kept
+   explicit so a future Streamlit update hiding the header can't take it out. */
+[data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"] {
+    visibility: visible !important; opacity: 1 !important;
+}
 
 @media (max-width: 800px) {
     .stat-row { grid-template-columns:repeat(2,1fr); }
@@ -362,15 +432,35 @@ footer { visibility: hidden; }
 """
 
 
+FONT_AWESOME_LINK = (
+    '<link rel="stylesheet" '
+    'href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">'
+)
+
+
 def inject_css():
     palette = LIGHT_PALETTE if st.session_state.get("theme") == "light" else DARK_PALETTE
     variables = ";".join(f"--lp-{name}:{value}" for name, value in palette.items())
+    # NOTE: Font Awesome only renders inside content Streamlit passes through as
+    # raw HTML (st.markdown(..., unsafe_allow_html=True)). Native widgets —
+    # st.button, st.tabs, sidebar nav — only ever render plain text, so those
+    # keep plain Unicode glyphs; Streamlit gives no way to put an icon font
+    # inside a widget's own label.
+    st.markdown(FONT_AWESOME_LINK, unsafe_allow_html=True)
     st.markdown(f"<style>:root{{{variables}}}{BASE_CSS}</style>", unsafe_allow_html=True)
 
 
 # ==========================================================
 # HELPERS
 # ==========================================================
+def subhead(icon_class: str, text: str):
+    """Section title with a Font Awesome icon (renders via raw HTML, so this
+    is only used inside st.markdown/HTML areas — not inside st.tabs or
+    st.button labels, which Streamlit always renders as plain text)."""
+    st.markdown(f'<div class="subhead"><i class="{icon_class}"></i>{text}</div>',
+               unsafe_allow_html=True)
+
+
 def create_docx(text: str) -> bytes:
     doc = Document()
     for block in text.split("\n\n"):
@@ -668,6 +758,54 @@ def strip_metadata(data: bytes, new_meta=None):
     return out.getvalue()
 
 
+def extract_images_from_pdf(data: bytes):
+    """Pull every embedded raster image out of a PDF into a ZIP. PyPDF2>=3.0
+    exposes page.images as a list of ImageFile objects with .name and .data."""
+    reader = PdfReader(io.BytesIO(data))
+    out = io.BytesIO()
+    count = 0
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+        for page_no, page in enumerate(reader.pages, start=1):
+            try:
+                images = page.images
+            except Exception:
+                images = []
+            for img_no, img in enumerate(images, start=1):
+                count += 1
+                ext = Path(img.name).suffix or ".png"
+                zf.writestr(f"page_{page_no:03d}_image_{img_no:02d}{ext}", img.data)
+    return out.getvalue(), count
+
+
+def compare_texts(text_a: str, text_b: str, max_rows: int = 600):
+    """Line-by-line diff between two extracted texts. Returns rows tagged
+    add/del/same plus counts, capped at max_rows so a huge document doesn't
+    freeze the browser rendering the comparison."""
+    lines_a = text_a.splitlines()
+    lines_b = text_b.splitlines()
+    added = removed = unchanged = 0
+    rows = []
+    truncated = False
+    for line in difflib.ndiff(lines_a, lines_b):
+        tag, content = line[:2], line[2:]
+        if tag == "+ ":
+            added += 1
+            kind = "add"
+        elif tag == "- ":
+            removed += 1
+            kind = "del"
+        elif tag == "  ":
+            unchanged += 1
+            kind = "same"
+        else:
+            continue  # skip "? " hint lines from ndiff
+        if len(rows) < max_rows:
+            rows.append((kind, content))
+        else:
+            truncated = True
+    return rows, added, removed, unchanged, truncated
+
+
 # ==========================================================
 # LAYOUT PIECES
 # ==========================================================
@@ -675,7 +813,7 @@ def render_brand():
     st.markdown(
         textwrap.dedent(f"""\
         <div class="lp-brand">
-            <div class="lp-logo">⚡</div>
+            <div class="lp-logo"><i class="fa-solid fa-bolt"></i></div>
             <div>
                 <div class="lp-brand-name">{APP_NAME}</div>
                 <div class="lp-brand-sub">Premium PDF &amp; document workspace</div>
@@ -683,6 +821,51 @@ def render_brand():
         </div>
         """),
         unsafe_allow_html=True,
+    )
+
+
+def render_share_widget(widget_key: str, compact: bool = False):
+    """A real 'copy link' control (not just an <a> that reopens the same page).
+    Built with components.html because Streamlit's own st.markdown() does not
+    execute <script> tags, so the Clipboard API needs the components iframe.
+
+    BUGFIX: an earlier version put the copy logic directly inside the
+    onclick="..." HTML attribute and tried to escape its inner double quotes
+    with backslashes (\\"). HTML attributes don't understand backslash
+    escaping — the browser sees the first literal " character and ends the
+    attribute right there, corrupting the button's markup. Moving the logic
+    into a named function inside a <script> block sidesteps the problem
+    entirely, since ordinary quotes are fine inside <script> content."""
+    palette = LIGHT_PALETTE if st.session_state.get("theme") == "light" else DARK_PALETTE
+    height = 44 if compact else 58
+    label = "Copy" if compact else "Copy share link"
+    fn_name = f"copyShareLink_{widget_key}"
+    components.html(
+        textwrap.dedent(f"""\
+        <div id="wrap-{widget_key}" style="font-family:-apple-system,Segoe UI,sans-serif;">
+          <button id="btn-{widget_key}" onclick="{fn_name}()"
+          style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+                 padding:{'8px 10px' if compact else '10px 16px'};border-radius:12px;cursor:pointer;
+                 font-weight:700;font-size:{'12.5px' if compact else '13px'};
+                 border:1px solid {palette['line']};
+                 background:{palette['btn-bg']};color:{palette['btn-text']};">
+            <i class="fa-solid fa-link"></i> {label}
+          </button>
+        </div>
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <script>
+        function {fn_name}() {{
+            navigator.clipboard.writeText("{SHARE_URL}").then(function() {{
+                var b = document.getElementById("btn-{widget_key}");
+                var original = b.innerHTML;
+                b.innerHTML = '<i class="fa-solid fa-check"></i> Link copied!';
+                setTimeout(function() {{ b.innerHTML = original; }}, 1800);
+            }});
+        }}
+        </script>
+        """),
+        height=height,
     )
 
 
@@ -696,6 +879,8 @@ def render_sidebar():
                      key="theme_toggle", use_container_width=True):
             st.session_state.theme = "light" if is_dark else "dark"
             st.rerun()
+
+        render_share_widget("sidebar_share")
 
         st.markdown("---")
         st.caption("WORKSPACE")
@@ -759,10 +944,10 @@ def render_hero():
             <div class="hero-copy">Convert, organize, optimize, secure, OCR and transform
             document content with a clean workflow designed for fast everyday use.</div>
             <div class="hero-badges">
-                <span class="badge">⚡ Fast workflows</span>
-                <span class="badge">🔒 Session-based processing</span>
-                <span class="badge">🌏 25-language OCR</span>
-                <span class="badge">📄 Office &amp; PDF tools</span>
+                <span class="badge"><i class="fa-solid fa-bolt"></i>Fast workflows</span>
+                <span class="badge"><i class="fa-solid fa-shield-halved"></i>Session-based processing</span>
+                <span class="badge"><i class="fa-solid fa-earth-asia"></i>25-language OCR</span>
+                <span class="badge"><i class="fa-solid fa-file-pdf"></i>Office &amp; PDF tools</span>
             </div>
         </div>
         """),
@@ -803,28 +988,30 @@ def render_all_workflows():
     ).strip().lower()
 
     tools = [
-        ("Convert PDF Suite", "Convert PDF", "⟲",
+        ("Convert PDF Suite", "Convert PDF", "fa-solid fa-arrows-rotate",
          "Convert JPG, Word, Excel, PowerPoint and HTML into PDF and back.", "Convert"),
-        ("Organize & Structure", "Organize PDF", "▦",
+        ("Organize & Structure", "Organize PDF", "fa-solid fa-layer-group",
          "Merge, split, extract, delete, reorder and rotate document pages.", "Organize"),
-        ("Privacy & Protection", "PDF Security", "⌑",
+        ("Privacy & Protection", "PDF Security", "fa-solid fa-lock",
          "Encrypt PDFs with passwords or unlock protected documents.", "Security"),
-        ("Document OCR Engine", "Convert PDF", "◫",
+        ("Document OCR Engine", "Convert PDF", "fa-solid fa-glasses",
          "Extract editable text from scans using 25 OCR language presets.", "OCR"),
-        ("Batch OCR", "Convert PDF", "❑",
+        ("Batch OCR", "Convert PDF", "fa-solid fa-square-poll-vertical",
          "Run OCR across several files at once and download one text bundle.", "Batch"),
-        ("Mobile Camera Scanner", "Convert PDF", "▣",
+        ("Mobile Camera Scanner", "Convert PDF", "fa-solid fa-camera",
          "Capture a physical document with your camera and save it as a PDF.", "Scanner"),
-        ("PDF Optimization", "Optimize PDF", "◉",
+        ("PDF Optimization", "Optimize PDF", "fa-solid fa-compress",
          "Stream compression or aggressive rasterization for smaller files.", "Optimize"),
-        ("PDF Editor", "Edit PDF", "✎",
+        ("PDF Editor", "Edit PDF", "fa-solid fa-pen-to-square",
          "Watermarks, text labels and automatic page numbering.", "Edit"),
-        ("Text Intelligence & TTS", "PDF Intelligence", "✦",
+        ("Text Intelligence & TTS", "PDF Intelligence", "fa-solid fa-wand-magic-sparkles",
          "Clean extracted text, analyse it, and convert it to speech.", "Intelligence"),
-        ("Document Inspector", "Document Inspector", "◍",
+        ("Document Inspector", "Document Inspector", "fa-solid fa-magnifying-glass",
          "Read PDF metadata and strip hidden author or producer details.", "Inspect"),
-        ("Privacy Overview", "Data Privacy", "✓",
+        ("Privacy Overview", "Data Privacy", "fa-solid fa-shield-halved",
          "Understand what is processed locally and what leaves the app.", "Privacy"),
+        ("Privacy Policy & Terms", "Privacy Policy", "fa-solid fa-file-contract",
+         "Read the plain-language privacy notice and terms of use.", "Legal"),
     ]
 
     visible = [item for item in tools
@@ -838,7 +1025,7 @@ def render_all_workflows():
     for idx, (title, category, icon, desc, chip) in enumerate(visible):
         with cols[idx % 4]:
             st.markdown(
-                f"<div class='card'><div class='card-icon'>{icon}</div>"
+                f"<div class='card'><div class='card-icon'><i class='{icon}'></i></div>"
                 f"<div class='card-title'>{title}</div>"
                 f"<div class='card-copy'>{desc}</div>"
                 f"<span class='card-chip'>{chip}</span></div>",
@@ -857,14 +1044,14 @@ def render_convert():
     st.markdown('<div class="section-title">Convert PDF</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Convert to PDF, convert from PDF, run OCR, '
                 'or scan straight from your camera.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["⬆️ To PDF", "⬇️ From PDF", "🔎 OCR Extractor", "❑ Batch OCR", "📷 Camera Scanner"])
+    tabs = st.tabs(["To PDF", "From PDF", "OCR Extractor", "Batch OCR", "Camera Scanner"])
 
     # ---------------- To PDF ----------------
     with tabs[0]:
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            st.markdown("#### 🖼️ JPG / PNG → 📄 PDF")
+            subhead("fa-solid fa-images", "JPG / PNG &rarr; PDF")
             images = st.file_uploader("Upload image files", type=["png", "jpg", "jpeg", "webp"],
                                       accept_multiple_files=True, key="img_to_pdf")
             page_fit = st.checkbox("Fit every image to A4", value=False, key="img_a4")
@@ -892,51 +1079,51 @@ def render_convert():
             render_result("img2pdf", "Download PDF")
 
             st.markdown("---")
-            st.markdown("#### 📽️ PowerPoint → 📄 PDF")
+            subhead("fa-solid fa-file-powerpoint", "PowerPoint &rarr; PDF")
             ppt_file = st.file_uploader("Upload PPT / PPTX", type=["ppt", "pptx"], key="ppt_to_pdf")
             if ppt_file and st.button("Convert PowerPoint", key="convert_ppt", use_container_width=True):
-                size_guard(ppt_file)
-                with st.spinner("Converting..."):
-                    result, err = run_libreoffice_to_pdf(ppt_file, ppt_file.name)
-                if result:
-                    store_result("ppt2pdf", result, "PowerPoint_Converted.pdf", MIME_PDF,
-                                 "PowerPoint converted successfully.")
-                else:
-                    st.warning(err)
+                if size_guard(ppt_file) and rate_limit_ok():
+                    with st.spinner("Converting..."):
+                        result, err = run_libreoffice_to_pdf(ppt_file, ppt_file.name)
+                    if result:
+                        store_result("ppt2pdf", result, "PowerPoint_Converted.pdf", MIME_PDF,
+                                     "PowerPoint converted successfully.")
+                    else:
+                        st.warning(err)
             render_result("ppt2pdf", "Download PDF")
 
         with c2:
-            st.markdown("#### 📝 Word → 📄 PDF")
+            subhead("fa-solid fa-file-word", "Word &rarr; PDF")
             doc_file = st.file_uploader("Upload Word file", type=["docx", "doc", "odt", "rtf", "txt"],
                                         key="doc_to_pdf")
             if doc_file and st.button("Convert Word", key="convert_word", use_container_width=True):
-                size_guard(doc_file)
-                with st.spinner("Converting..."):
-                    result, err = run_libreoffice_to_pdf(doc_file, doc_file.name)
-                if result:
-                    store_result("doc2pdf", result, "Word_Converted.pdf", MIME_PDF,
-                                 "Document converted successfully.")
-                else:
-                    st.warning(err)
+                if size_guard(doc_file) and rate_limit_ok():
+                    with st.spinner("Converting..."):
+                        result, err = run_libreoffice_to_pdf(doc_file, doc_file.name)
+                    if result:
+                        store_result("doc2pdf", result, "Word_Converted.pdf", MIME_PDF,
+                                     "Document converted successfully.")
+                    else:
+                        st.warning(err)
             render_result("doc2pdf", "Download PDF")
 
             st.markdown("---")
-            st.markdown("#### 📊 Excel → 📄 PDF")
+            subhead("fa-solid fa-file-excel", "Excel &rarr; PDF")
             xls_file = st.file_uploader("Upload Excel sheet", type=["xls", "xlsx", "csv", "ods"],
                                         key="xls_to_pdf")
             if xls_file and st.button("Convert Excel", key="convert_excel", use_container_width=True):
-                size_guard(xls_file)
-                with st.spinner("Converting..."):
-                    result, err = run_libreoffice_to_pdf(xls_file, xls_file.name)
-                if result:
-                    store_result("xls2pdf", result, "Excel_Converted.pdf", MIME_PDF,
-                                 "Spreadsheet converted successfully.")
-                else:
-                    st.warning(err)
+                if size_guard(xls_file) and rate_limit_ok():
+                    with st.spinner("Converting..."):
+                        result, err = run_libreoffice_to_pdf(xls_file, xls_file.name)
+                    if result:
+                        store_result("xls2pdf", result, "Excel_Converted.pdf", MIME_PDF,
+                                     "Spreadsheet converted successfully.")
+                    else:
+                        st.warning(err)
             render_result("xls2pdf", "Download PDF")
 
         with c3:
-            st.markdown("#### 🌐 HTML → 📄 PDF")
+            subhead("fa-solid fa-code", "HTML &rarr; PDF")
             html_input = st.text_area("Paste HTML code", height=180, key="html_to_pdf")
             if html_input.strip() and st.button("Convert HTML", key="convert_html",
                                                 use_container_width=True):
@@ -949,7 +1136,7 @@ def render_convert():
             render_result("html2pdf", "Download PDF")
 
             st.markdown("---")
-            st.markdown("#### 📃 Plain text → 📄 PDF")
+            subhead("fa-solid fa-file-lines", "Plain text &rarr; PDF")
             txt_input = st.text_area("Paste any text", height=150, key="txt_to_pdf")
             if txt_input.strip() and st.button("Convert Text", key="convert_txt",
                                                use_container_width=True):
@@ -972,7 +1159,7 @@ def render_convert():
         c1, c2 = st.columns(2)
 
         with c1:
-            st.markdown("#### 📄 PDF → 🖼️ Images")
+            subhead("fa-solid fa-file-pdf", "PDF &rarr; Images")
             pdf_img_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_jpg")
             fmt = st.radio("Image format", ["JPEG", "PNG"], horizontal=True, key="img_fmt")
             dpi = st.select_slider("Resolution (DPI)", options=[72, 110, 150, 200, 300],
@@ -989,7 +1176,7 @@ def render_convert():
             render_result("pdf2img", "Download image ZIP")
 
             st.markdown("---")
-            st.markdown("#### 📄 PDF → 📝 Word")
+            subhead("fa-solid fa-file-pdf", "PDF &rarr; Word")
             pdf_word_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_word")
             if pdf_word_file and st.button("Convert PDF to DOCX", key="pdf_word_btn",
                                            use_container_width=True):
@@ -1006,7 +1193,7 @@ def render_convert():
             render_result("pdf2docx", "Download DOCX")
 
         with c2:
-            st.markdown("#### 📄 PDF → 📊 Excel (tables)")
+            subhead("fa-solid fa-file-pdf", "PDF &rarr; Excel (tables)")
             pdf_xls_file = st.file_uploader("Upload PDF with tables", type=["pdf"], key="pdf_to_xls")
             if pdf_xls_file and st.button("Extract Tables", key="pdf_xls_btn",
                                           use_container_width=True):
@@ -1020,7 +1207,7 @@ def render_convert():
             render_result("pdf2xlsx", "Download XLSX")
 
             st.markdown("---")
-            st.markdown("#### 📄 PDF → 📃 Plain text")
+            subhead("fa-solid fa-file-pdf", "PDF &rarr; Plain text")
             pdf_txt_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_txt")
             if pdf_txt_file and st.button("Extract Text File", key="pdf_txt_btn",
                                           use_container_width=True):
@@ -1047,28 +1234,28 @@ def render_convert():
         auto_clean = st.checkbox("Clean up spacing after OCR", value=True, key="ocr_clean")
 
         if uploaded_file and st.button("Extract Text", key="ocr_btn", use_container_width=True):
-            try:
-                size_guard(uploaded_file)
-                with st.spinner("Extracting text..."):
-                    is_pdf = uploaded_file.name.lower().endswith(".pdf")
-                    if is_pdf:
-                        text_result = extract_pdf_text_or_ocr(uploaded_file.getvalue(),
-                                                              OCR_LANGS[lang])
+            if size_guard(uploaded_file) and rate_limit_ok():
+                try:
+                    with st.spinner("Extracting text..."):
+                        is_pdf = uploaded_file.name.lower().endswith(".pdf")
+                        if is_pdf:
+                            text_result = extract_pdf_text_or_ocr(uploaded_file.getvalue(),
+                                                                  OCR_LANGS[lang])
+                        else:
+                            text_result = ocr_image(Image.open(as_stream(uploaded_file)),
+                                                    OCR_LANGS[lang])
+                    if auto_clean:
+                        text_result = clean_text(text_result)
+                    if text_result.strip():
+                        st.session_state["ocr_text"] = text_result
+                        store_result("ocr_docx", create_docx(text_result), "OCR_Output.docx",
+                                     MIME_DOCX, "OCR completed.")
                     else:
-                        text_result = ocr_image(Image.open(as_stream(uploaded_file)),
-                                                OCR_LANGS[lang])
-                if auto_clean:
-                    text_result = clean_text(text_result)
-                if text_result.strip():
-                    st.session_state["ocr_text"] = text_result
-                    store_result("ocr_docx", create_docx(text_result), "OCR_Output.docx",
-                                 MIME_DOCX, "OCR completed.")
-                else:
-                    st.warning("No text was detected. Try a higher-quality scan or another language.")
-            except pytesseract.TesseractError as exc:
-                st.error(f"Tesseract could not use this language pack: {exc}")
-            except Exception as exc:
-                st.error(f"OCR failed: {exc}")
+                        st.warning("No text was detected. Try a higher-quality scan or another language.")
+                except pytesseract.TesseractError as exc:
+                    st.error(f"Tesseract could not use this language pack: {exc}")
+                except Exception as exc:
+                    st.error(f"OCR failed: {exc}")
 
         if st.session_state.get("ocr_text"):
             st.text_area("Extracted text", st.session_state["ocr_text"], height=260, key="ocr_view")
@@ -1085,12 +1272,16 @@ def render_convert():
 
     # ---------------- Batch OCR ----------------
     with tabs[3]:
-        st.markdown("#### 🔎 Run OCR on several files at once")
+        subhead("fa-solid fa-layer-group", "Run OCR on several files at once")
         batch_files = st.file_uploader("Upload images or PDFs",
                                        type=["png", "jpg", "jpeg", "webp", "pdf"],
                                        accept_multiple_files=True, key="batch_ocr_files")
         batch_lang = st.selectbox("OCR language", list(OCR_LANGS.keys()), key="batch_ocr_lang")
-        if batch_files and st.button("Run Batch OCR", key="batch_ocr_btn", use_container_width=True):
+        if batch_files and len(batch_files) > MAX_BATCH_FILES:
+            st.warning(f"Batch OCR is capped at {MAX_BATCH_FILES} files per run on this free "
+                      f"service — you uploaded {len(batch_files)}. Please run it in smaller batches.")
+        elif batch_files and st.button("Run Batch OCR", key="batch_ocr_btn", use_container_width=True) \
+                and rate_limit_ok():
             bundle = io.BytesIO()
             failures = []
             try:
@@ -1120,7 +1311,7 @@ def render_convert():
 
     # ---------------- Camera ----------------
     with tabs[4]:
-        st.markdown("#### 📷 Camera document scanner")
+        subhead("fa-solid fa-camera", "Camera document scanner")
         cam_photo = st.camera_input("Take a picture")
         if cam_photo:
             img = Image.open(as_stream(cam_photo)).convert("RGB")
@@ -1143,7 +1334,8 @@ def render_organize():
     st.markdown('<div class="section-title">Organize PDF</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Control document structure without leaving '
                 'the workspace.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["🔗 Merge", "✂️ Split", "📑 Extract Pages", "🗑️ Delete Pages", "🔀 Reorder", "↻ Rotate"])
+    tabs = st.tabs(["Merge", "Split", "Extract Pages", "Delete Pages", "Reorder", "Rotate",
+                    "Extract Images"])
 
     # ---- Merge ----
     with tabs[0]:
@@ -1325,6 +1517,27 @@ def render_organize():
                 st.error(f"Rotation failed: {exc}")
         render_result("rotate", "Download rotated PDF")
 
+    # ---- Extract Images ----
+    with tabs[6]:
+        st.markdown('<div class="mini-note">Pulls every embedded photo/figure out of a PDF as '
+                    'separate image files — useful for reusing figures or scanned photos '
+                    'without re-exporting the whole page.</div>', unsafe_allow_html=True)
+        img_file = st.file_uploader("Upload PDF", type=["pdf"], key="extract_img_file")
+        if img_file and st.button("Extract Images", key="extract_img_btn", use_container_width=True):
+            try:
+                with st.spinner("Scanning pages for embedded images..."):
+                    result, count = extract_images_from_pdf(img_file.getvalue())
+                if count == 0:
+                    st.info("No embedded raster images were found in this PDF. If the pages "
+                            "are themselves scanned photos, use 'PDF → Images' under Convert "
+                            "PDF instead to export full-page renders.")
+                else:
+                    store_result("extract_img", result, "Extracted_Images.zip", MIME_ZIP,
+                                 f"Extracted {count} image(s) from the PDF.")
+            except Exception as exc:
+                st.error(f"Image extraction failed: {exc}")
+        render_result("extract_img", "Download image ZIP")
+
 
 # ==========================================================
 # WORKFLOW: OPTIMIZE
@@ -1380,7 +1593,7 @@ def render_edit():
         st.error("The annotation engine is unavailable because reportlab is not installed.")
         return
 
-    tabs = st.tabs(["💧 Watermark & labels", "🔢 Page numbers"])
+    tabs = st.tabs(["Watermark & labels", "Page numbers"])
 
     with tabs[0]:
         file = st.file_uploader("Upload PDF", type=["pdf"], key="edit_pdf_file")
@@ -1441,7 +1654,7 @@ def render_security():
     st.markdown('<div class="section-title">PDF Security</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Protect or unlock PDFs with a password you '
                 'control.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["🔒 Encrypt PDF", "🔓 Decrypt PDF"])
+    tabs = st.tabs(["Encrypt PDF", "Decrypt PDF"])
 
     with tabs[0]:
         sec_file = st.file_uploader("Upload PDF", type=["pdf"], key="sec_encrypt")
@@ -1521,7 +1734,8 @@ def render_intelligence():
     st.markdown('<div class="section-title">PDF Intelligence</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-copy">Clean extracted text, measure it, and generate '
                 'speech from your content.</div>', unsafe_allow_html=True)
-    tabs = st.tabs(["🧹 Clean OCR Text", "📊 Text Analysis", "🔍 Find & Replace", "🔊 Text-to-Speech"])
+    tabs = st.tabs(["Clean OCR Text", "Text Analysis", "Find & Replace", "Text-to-Speech",
+                    "Compare PDFs"])
 
     with tabs[0]:
         raw_text = st.text_area("Paste raw OCR text", height=220, key="clean_raw")
@@ -1625,6 +1839,59 @@ def render_intelligence():
                     'gTTS service. Avoid pasting confidential content here.</div>',
                     unsafe_allow_html=True)
 
+    # ---- Compare PDFs ----
+    with tabs[4]:
+        st.markdown('<div class="mini-note">Upload two versions of a document to see what '
+                    'changed — added lines are highlighted green, removed lines red. Works on '
+                    'contracts, essays, or any two PDFs with embedded text.</div>',
+                    unsafe_allow_html=True)
+        col_a, col_b = st.columns(2)
+        with col_a:
+            pdf_a = st.file_uploader("Original PDF", type=["pdf"], key="cmp_pdf_a")
+        with col_b:
+            pdf_b = st.file_uploader("Revised PDF", type=["pdf"], key="cmp_pdf_b")
+
+        if pdf_a and pdf_b and st.button("Compare Documents", key="cmp_btn",
+                                         use_container_width=True):
+            try:
+                with st.spinner("Comparing documents..."):
+                    text_a = clean_text(extract_pdf_text(pdf_a.getvalue()))
+                    text_b = clean_text(extract_pdf_text(pdf_b.getvalue()))
+                    if not text_a.strip() or not text_b.strip():
+                        st.info("One of these PDFs has no embedded text (likely a scan). "
+                                "Run it through OCR Extractor first, then compare the "
+                                "resulting text with Find & Replace instead.")
+                    else:
+                        rows, added, removed, unchanged, truncated = compare_texts(text_a, text_b)
+                        st.session_state["cmp_rows"] = rows
+                        st.session_state["cmp_stats"] = (added, removed, unchanged, truncated)
+                        report_lines = ["LipiParse Studio — Document Comparison", ""]
+                        for kind, content in rows:
+                            prefix = {"add": "+ ", "del": "- ", "same": "  "}[kind]
+                            report_lines.append(prefix + content)
+                        store_result("cmp_report", "\n".join(report_lines).encode("utf-8"),
+                                     "Comparison_Report.txt", MIME_TXT,
+                                     f"Compared documents: {added} added, {removed} removed line(s).")
+            except Exception as exc:
+                st.error(f"Comparison failed: {exc}")
+
+        if st.session_state.get("cmp_rows"):
+            added, removed, unchanged, truncated = st.session_state["cmp_stats"]
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Lines added", added)
+            m2.metric("Lines removed", removed)
+            m3.metric("Unchanged", unchanged)
+            diff_html = ['<div class="diff-box">']
+            for kind, content in st.session_state["cmp_rows"]:
+                safe = html_escape(content) or "&nbsp;"
+                diff_html.append(f'<div class="diff-row diff-{kind}">{safe}</div>')
+            if truncated:
+                diff_html.append('<div class="diff-row diff-same">'
+                                 '… output truncated, download the full report below …</div>')
+            diff_html.append("</div>")
+            st.markdown("".join(diff_html), unsafe_allow_html=True)
+            render_result("cmp_report", "Download full comparison (.txt)")
+
 
 # ==========================================================
 # WORKFLOW: DOCUMENT INSPECTOR
@@ -1650,14 +1917,14 @@ def render_inspector():
     for col, (label, value) in zip(cols, info.items()):
         col.metric(label, value)
 
-    st.markdown("#### 🏷️ Embedded metadata")
+    subhead("fa-solid fa-tags", "Embedded metadata")
     if meta:
         for label, value in meta.items():
             st.markdown(f"**{label}:** {value}")
     else:
         st.caption("No document metadata found (or the file is encrypted).")
 
-    st.markdown("#### 📐 Page dimensions")
+    subhead("fa-solid fa-ruler-combined", "Page dimensions")
     try:
         reader = PdfReader(io.BytesIO(data))
         if not reader.is_encrypted:
@@ -1671,7 +1938,7 @@ def render_inspector():
         pass
 
     st.markdown("---")
-    st.markdown("#### 🧹 Clean metadata")
+    subhead("fa-solid fa-broom", "Clean metadata")
     col_a, col_b = st.columns(2)
     with col_a:
         new_title = st.text_input("New title (optional)", key="meta_title")
@@ -1728,7 +1995,7 @@ def render_privacy():
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### ⚙️ Runtime status")
+    subhead("fa-solid fa-gear", "Runtime status")
     checks = {
         "LibreOffice (Office → PDF)": bool(get_soffice()),
         "reportlab (watermarks, page numbers)": REPORTLAB_AVAILABLE,
@@ -1742,6 +2009,64 @@ def render_privacy():
 
     for label, ok in checks.items():
         st.markdown(f"{'🟢' if ok else '🔴'} {label} — {'available' if ok else 'not detected'}")
+
+
+def render_privacy_policy():
+    """Plain-language Privacy Policy & Terms of Use. This is a formal legal-
+    style notice (separate from the technical 'Data Privacy' tab above),
+    which matters for a public, login-free tool that touches uploaded
+    documents and calls one external service (gTTS)."""
+    st.markdown('<div class="section-title">Privacy Policy &amp; Terms of Use</div>',
+               unsafe_allow_html=True)
+    st.markdown(f'<div class="section-copy">Last updated: {datetime.now().strftime("%B %Y")} '
+               f'&nbsp;•&nbsp; Applies to every visitor of {APP_NAME}, no account required.'
+               f'</div>', unsafe_allow_html=True)
+
+    st.markdown(
+        textwrap.dedent(f"""\
+        <div class="tool-panel">
+            <h3 style="color:var(--lp-text)"><i class="fa-solid fa-user-shield"></i>&nbsp; No accounts, no tracking of who you are</h3>
+            <p style="color:var(--lp-muted);line-height:1.7">{APP_NAME} does not ask you to
+            sign up, does not use cookies to identify you personally, and does not build a
+            profile of who you are. Anything you upload is processed only for the duration of
+            your browser session and is never written to a database.</p>
+
+            <h3 style="color:var(--lp-text)"><i class="fa-solid fa-file-shield"></i>&nbsp; What happens to your files</h3>
+            <p style="color:var(--lp-muted);line-height:1.7">Uploaded files stay in server
+            memory only long enough to run the tool you chose (convert, merge, OCR, etc.) and
+            to hand the result back to your browser as a download. They are not copied
+            anywhere else, not reviewed by a person, and are discarded once your session ends
+            or you close the tab.</p>
+
+            <h3 style="color:var(--lp-text)"><i class="fa-solid fa-globe"></i>&nbsp; The one external service we use</h3>
+            <p style="color:var(--lp-muted);line-height:1.7">The Text-to-Speech tool sends the
+            text you type to Google's gTTS service so it can generate the audio file. That is
+            the only workflow in this app where your content leaves the app's own runtime.
+            Please avoid pasting confidential text into that tool specifically.</p>
+
+            <h3 style="color:var(--lp-text)"><i class="fa-solid fa-scale-balanced"></i>&nbsp; Your responsibility</h3>
+            <p style="color:var(--lp-muted);line-height:1.7">You confirm that you have the
+            right to upload and process any file you submit here. {APP_NAME} is provided
+            "as is", free of charge, with no warranty of any kind — please keep your own backup
+            of anything important, and double-check sensitive output (passwords, OCR text,
+            merged documents) before relying on it.</p>
+
+            <h3 style="color:var(--lp-text)"><i class="fa-solid fa-server"></i>&nbsp; Fair use</h3>
+            <p style="color:var(--lp-muted);line-height:1.7">This is a free, shared service, so
+            reasonable limits apply to file size, batch size and actions per session to keep it
+            usable for everyone. Automated scraping, bulk/scripted abuse, or attempts to bypass
+            those limits are not permitted.</p>
+        </div>
+        """),
+        unsafe_allow_html=True,
+    )
+
+    contact_line = CONTACT_EMAIL or "the contact details on the site footer"
+    st.markdown(
+        f'<div class="mini-note" style="margin-top:14px;">Questions about this notice, or a '
+        f'takedown/removal request? Reach out via {contact_line}.</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ==========================================================
@@ -1768,41 +2093,50 @@ def render_footer():
     # passed to st.markdown has 4+ leading spaces on its first line, Streamlit's
     # markdown parser treats it as a code block and prints the raw tags as text
     # instead of rendering them — that was the "falling text" bug in the footer.
-    footer_html = (
-        '<div style="margin-top:50px;padding:30px;border-top:1px solid var(--lp-line);'
+    footer_top_html = (
+        '<div style="margin-top:50px;padding:30px 30px 0 30px;border-top:1px solid var(--lp-line);'
         'background:var(--lp-card);border-radius:18px 18px 0 0;text-align:center;">'
         f'<div style="font-size:20px;font-weight:700;color:var(--lp-text);margin-bottom:8px;">'
-        f'⚡ {APP_NAME}</div>'
+        f'<i class="fa-solid fa-bolt" style="color:var(--lp-blue);"></i> {APP_NAME}</div>'
         '<div style="color:var(--lp-muted);font-size:13px;margin-bottom:18px;">'
         'Premium PDF &amp; document workspace</div>'
         '<div style="display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:18px 0;">'
         f'{links_html}</div>'
-        f'<a href="{SHARE_URL}" target="_blank" '
-        'style="display:inline-block;margin:8px 0 20px 0;padding:11px 20px;border-radius:12px;'
-        'background:linear-gradient(135deg,#1677ff,#36c5ff);color:white;'
-        'text-decoration:none;font-weight:700;font-size:13px;">'
-        f'Invite / Share {APP_NAME}</a>'
-        f'<div style="color:var(--lp-muted);font-size:12px;margin-top:8px;">{contact_html}</div>'
+        '</div>'
+    )
+    st.markdown(footer_top_html, unsafe_allow_html=True)
+
+    # A real Clipboard-API copy button replaces the old <a href> that just
+    # reopened the same page — that link never actually helped anyone share it.
+    _, mid, _ = st.columns([1.6, 1, 1.6])
+    with mid:
+        render_share_widget("footer_share")
+
+    footer_bottom_html = (
+        '<div style="padding:0 30px 30px 30px;background:var(--lp-card);'
+        'border-radius:0 0 18px 18px;text-align:center;">'
+        f'<div style="color:var(--lp-muted);font-size:12px;margin-top:2px;">{contact_html}</div>'
         '<div style="margin-top:20px;padding-top:15px;border-top:1px solid var(--lp-line);'
         'color:var(--lp-muted);font-size:11px;">'
-        f'⚡ {APP_NAME} • Version {APP_VERSION}<br>'
+        f'<i class="fa-solid fa-bolt"></i> {APP_NAME} • Version {APP_VERSION}<br>'
         'Built for fast everyday document workflows. © 2026</div>'
         '</div>'
     )
-    st.markdown(footer_html, unsafe_allow_html=True)
+    st.markdown(footer_bottom_html, unsafe_allow_html=True)
 
 
 def render_breadcrumb(active_tab: str):
     """Shown instead of the hero/stats block once a specific tool is open,
     so the person lands straight on that tool's options instead of scrolling
     past dashboard-only content."""
-    icon, blurb = TOOL_META.get(active_tab, ("⌘", ""))
+    _, blurb = TOOL_META.get(active_tab, ("⌘", ""))
+    icon_class = TOOL_ICON_FA.get(active_tab, "fa-solid fa-table-cells-large")
     left, right = st.columns([5, 1])
     with left:
         st.markdown(
             f"<div style='color:var(--lp-muted);font-size:.85rem;margin-bottom:.2rem;'>"
             f"All Workflows / <span style='color:var(--lp-text);font-weight:700;'>"
-            f"{icon} {active_tab}</span></div>"
+            f"<i class=\"{icon_class}\" style='color:var(--lp-blue);'></i> {active_tab}</span></div>"
             f"<div style='color:var(--lp-muted);font-size:.82rem;margin-bottom:.8rem;'>{blurb}</div>",
             unsafe_allow_html=True,
         )
@@ -1843,6 +2177,7 @@ ROUTES = {
     "PDF Intelligence": render_intelligence,
     "Document Inspector": render_inspector,
     "Data Privacy": render_privacy,
+    "Privacy Policy": render_privacy_policy,
 }
 
 ROUTES.get(selected_tab, render_all_workflows)()
