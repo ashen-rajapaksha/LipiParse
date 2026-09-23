@@ -56,7 +56,7 @@ st.set_page_config(
     page_title="LipiParse Studio | Premium PDF Workspace",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
     menu_items={
         "Get help": "https://docs.streamlit.io/",
         "Report a bug": "https://github.com/",
@@ -72,12 +72,15 @@ MAX_BATCH_FILES = 15        # cap on batch OCR file count per run
 MAX_SESSION_ACTIONS = 60    # cap on heavy actions per browser session
 SHARE_URL = "https://lipiparse-mcthmncr2jfncvym8kbxmw.streamlit.app/"
 
-# --- Edit these once and the footer updates itself. Leave "" to hide a link ---
+# --- Edit "url" for each once you have the real page/profile — the icon
+# already shows either way (muted/greyed-out until a real url is set, so the
+# footer looks finished from day one instead of having gaps). ---
 SOCIAL_LINKS = {
-    "Facebook": "",
-    "Instagram": "",
-    "LinkedIn": "",
-    "GitHub": "",
+    "Facebook": {"icon": "fa-brands fa-facebook-f", "url": ""},
+    "Instagram": {"icon": "fa-brands fa-instagram", "url": ""},
+    "LinkedIn": {"icon": "fa-brands fa-linkedin-in", "url": ""},
+    "WhatsApp": {"icon": "fa-brands fa-whatsapp", "url": ""},
+    "GitHub": {"icon": "fa-brands fa-github", "url": ""},
 }
 CONTACT_EMAIL = ""
 CONTACT_PHONE = ""
@@ -155,7 +158,7 @@ TOOL_ICON_FA = {
 def init_state():
     defaults = {
         "selected_tab": "All Workflows",
-        "theme": "dark",
+        "theme": "light",
         "documents_processed": 0,
         "results": {},        # key -> {data, filename, mime, message}
         "activity": [],       # recent action log
@@ -278,25 +281,25 @@ DARK_PALETTE = {
 }
 
 LIGHT_PALETTE = {
-    "bg": "#f4f7fb",
+    # Office/education palette: classic ribbon-blue accent, muted teal-green
+    # for secondary highlights, flat neutral backgrounds instead of colourful
+    # gradient blooms — reads like productivity software, not a startup demo.
+    "bg": "#f5f7fa",
     "panel": "#ffffff",
-    "line": "rgba(16,38,64,.12)",
-    "text": "#0f1f33",
-    "muted": "#5b6f85",
-    "blue": "#1f6feb",
-    "cyan": "#0aa2c0",
-    "purple": "#6b5bd2",
-    "green": "#1a9c6e",
-    "card": "linear-gradient(180deg, #ffffff, #f7fafd)",
+    "line": "rgba(18,42,72,.12)",
+    "text": "#13233a",
+    "muted": "#5b6b7d",
+    "blue": "#1a56db",
+    "cyan": "#0f766e",
+    "purple": "#3454a7",
+    "green": "#15803d",
+    "card": "linear-gradient(180deg, #ffffff, #f7f9fc)",
     "input-bg": "#ffffff",
-    "app-bg": ("radial-gradient(circle at 8% 0%, rgba(31,111,235,.10), transparent 24%),"
-               "radial-gradient(circle at 92% 10%, rgba(107,91,210,.08), transparent 26%),"
-               "linear-gradient(180deg, #f7fafd 0%, #eef3f9 100%)"),
-    "hero-bg": ("radial-gradient(circle at 82% 18%, rgba(10,162,192,.16), transparent 24%),"
-                "linear-gradient(135deg, #e8f1ff, #dfe9ff 60%, #e7e3ff)"),
-    "hero-text": "#2b4058",
-    "sidebar-bg": "linear-gradient(180deg, #ffffff 0%, #eef3f9 100%)",
-    "btn-bg": "linear-gradient(135deg, #ffffff, #eaf1fb)",
+    "app-bg": "linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%)",
+    "hero-bg": "linear-gradient(120deg, #eaf1fc 0%, #eef3f8 55%, #eaeff5 100%)",
+    "hero-text": "#2c3e54",
+    "sidebar-bg": "linear-gradient(180deg, #ffffff 0%, #eef2f7 100%)",
+    "btn-bg": "linear-gradient(135deg, #ffffff, #eaf1fc)",
     "btn-text": "#12314f",
 }
 
@@ -388,6 +391,19 @@ div[data-testid="stDownloadButton"] > button:hover {
 }
 [data-testid="stFileUploaderDropzone"] {
     background:var(--lp-card); border:1px dashed var(--lp-line); border-radius:16px;
+}
+
+/* Search icon for the dashboard search box. Streamlit still sets aria-label
+   from the widget's label text even with label_visibility="collapsed", so
+   that's a safe, version-stable hook — no custom key/container needed.
+   Plain <input> elements can't render ::before content, hence a CSS
+   background-image (inline SVG) instead of an icon font glyph. */
+input[aria-label="Search workflows"] {
+    padding-left: 2.5rem !important;
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 16px 16px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6b7d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
 }
 
 .diff-box {
@@ -1047,10 +1063,20 @@ def render_convert():
     tabs = st.tabs(["To PDF", "From PDF", "OCR Extractor", "Batch OCR", "Camera Scanner"])
 
     # ---------------- To PDF ----------------
+    # BUGFIX/UX: this used to cram all 6 converters into 3 columns at once —
+    # nothing told you which column held what, and everything competed for
+    # attention. A single "choose a converter" selector shows exactly one
+    # tool at a time, in a clear order, like a real converter tool.
     with tabs[0]:
-        c1, c2, c3 = st.columns(3)
+        to_pdf_choice = st.selectbox(
+            "Choose a converter",
+            ["JPG / PNG → PDF", "Word → PDF", "Excel → PDF", "PowerPoint → PDF",
+             "HTML → PDF", "Plain text → PDF"],
+            key="to_pdf_choice",
+        )
+        st.markdown("---")
 
-        with c1:
+        if to_pdf_choice == "JPG / PNG → PDF":
             subhead("fa-solid fa-images", "JPG / PNG &rarr; PDF")
             images = st.file_uploader("Upload image files", type=["png", "jpg", "jpeg", "webp"],
                                       accept_multiple_files=True, key="img_to_pdf")
@@ -1078,21 +1104,7 @@ def render_convert():
                     st.error(f"Image conversion failed: {exc}")
             render_result("img2pdf", "Download PDF")
 
-            st.markdown("---")
-            subhead("fa-solid fa-file-powerpoint", "PowerPoint &rarr; PDF")
-            ppt_file = st.file_uploader("Upload PPT / PPTX", type=["ppt", "pptx"], key="ppt_to_pdf")
-            if ppt_file and st.button("Convert PowerPoint", key="convert_ppt", use_container_width=True):
-                if size_guard(ppt_file) and rate_limit_ok():
-                    with st.spinner("Converting..."):
-                        result, err = run_libreoffice_to_pdf(ppt_file, ppt_file.name)
-                    if result:
-                        store_result("ppt2pdf", result, "PowerPoint_Converted.pdf", MIME_PDF,
-                                     "PowerPoint converted successfully.")
-                    else:
-                        st.warning(err)
-            render_result("ppt2pdf", "Download PDF")
-
-        with c2:
+        elif to_pdf_choice == "Word → PDF":
             subhead("fa-solid fa-file-word", "Word &rarr; PDF")
             doc_file = st.file_uploader("Upload Word file", type=["docx", "doc", "odt", "rtf", "txt"],
                                         key="doc_to_pdf")
@@ -1107,7 +1119,7 @@ def render_convert():
                         st.warning(err)
             render_result("doc2pdf", "Download PDF")
 
-            st.markdown("---")
+        elif to_pdf_choice == "Excel → PDF":
             subhead("fa-solid fa-file-excel", "Excel &rarr; PDF")
             xls_file = st.file_uploader("Upload Excel sheet", type=["xls", "xlsx", "csv", "ods"],
                                         key="xls_to_pdf")
@@ -1122,7 +1134,21 @@ def render_convert():
                         st.warning(err)
             render_result("xls2pdf", "Download PDF")
 
-        with c3:
+        elif to_pdf_choice == "PowerPoint → PDF":
+            subhead("fa-solid fa-file-powerpoint", "PowerPoint &rarr; PDF")
+            ppt_file = st.file_uploader("Upload PPT / PPTX", type=["ppt", "pptx"], key="ppt_to_pdf")
+            if ppt_file and st.button("Convert PowerPoint", key="convert_ppt", use_container_width=True):
+                if size_guard(ppt_file) and rate_limit_ok():
+                    with st.spinner("Converting..."):
+                        result, err = run_libreoffice_to_pdf(ppt_file, ppt_file.name)
+                    if result:
+                        store_result("ppt2pdf", result, "PowerPoint_Converted.pdf", MIME_PDF,
+                                     "PowerPoint converted successfully.")
+                    else:
+                        st.warning(err)
+            render_result("ppt2pdf", "Download PDF")
+
+        elif to_pdf_choice == "HTML → PDF":
             subhead("fa-solid fa-code", "HTML &rarr; PDF")
             html_input = st.text_area("Paste HTML code", height=180, key="html_to_pdf")
             if html_input.strip() and st.button("Convert HTML", key="convert_html",
@@ -1135,7 +1161,7 @@ def render_convert():
                     st.warning(err)
             render_result("html2pdf", "Download PDF")
 
-            st.markdown("---")
+        elif to_pdf_choice == "Plain text → PDF":
             subhead("fa-solid fa-file-lines", "Plain text &rarr; PDF")
             txt_input = st.text_area("Paste any text", height=150, key="txt_to_pdf")
             if txt_input.strip() and st.button("Convert Text", key="convert_txt",
@@ -1156,9 +1182,14 @@ def render_convert():
 
     # ---------------- From PDF ----------------
     with tabs[1]:
-        c1, c2 = st.columns(2)
+        from_pdf_choice = st.selectbox(
+            "Choose a converter",
+            ["PDF → Images", "PDF → Word", "PDF → Excel (tables)", "PDF → Plain text"],
+            key="from_pdf_choice",
+        )
+        st.markdown("---")
 
-        with c1:
+        if from_pdf_choice == "PDF → Images":
             subhead("fa-solid fa-file-pdf", "PDF &rarr; Images")
             pdf_img_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_jpg")
             fmt = st.radio("Image format", ["JPEG", "PNG"], horizontal=True, key="img_fmt")
@@ -1175,7 +1206,7 @@ def render_convert():
                     st.error(f"PDF to image failed: {exc}")
             render_result("pdf2img", "Download image ZIP")
 
-            st.markdown("---")
+        elif from_pdf_choice == "PDF → Word":
             subhead("fa-solid fa-file-pdf", "PDF &rarr; Word")
             pdf_word_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_word")
             if pdf_word_file and st.button("Convert PDF to DOCX", key="pdf_word_btn",
@@ -1192,7 +1223,7 @@ def render_convert():
                     st.error(f"PDF to Word failed: {exc}")
             render_result("pdf2docx", "Download DOCX")
 
-        with c2:
+        elif from_pdf_choice == "PDF → Excel (tables)":
             subhead("fa-solid fa-file-pdf", "PDF &rarr; Excel (tables)")
             pdf_xls_file = st.file_uploader("Upload PDF with tables", type=["pdf"], key="pdf_to_xls")
             if pdf_xls_file and st.button("Extract Tables", key="pdf_xls_btn",
@@ -1206,7 +1237,7 @@ def render_convert():
                     st.error(f"PDF to Excel failed: {exc}")
             render_result("pdf2xlsx", "Download XLSX")
 
-            st.markdown("---")
+        elif from_pdf_choice == "PDF → Plain text":
             subhead("fa-solid fa-file-pdf", "PDF &rarr; Plain text")
             pdf_txt_file = st.file_uploader("Upload PDF", type=["pdf"], key="pdf_to_txt")
             if pdf_txt_file and st.button("Extract Text File", key="pdf_txt_btn",
@@ -1979,6 +2010,10 @@ def render_privacy():
             gTTS sends the text you type into Text-to-Speech to Google in order to synthesise
             audio. Everything else — OCR, conversion, merging, encryption — runs inside the
             app runtime.</div>
+            <div class="mini-note" style="margin-top:8px;"><b>Multiple visitors at once:</b>
+            every browser tab gets its own isolated session — uploads, results and the action
+            counter for one visitor are never visible to another. You can use this tool at the
+            same time as other people without your files or theirs crossing over.</div>
             <div style="height:12px"></div>
             <div class="stat-row">
                 <div class="stat"><div class="stat-label">App database</div>
@@ -2074,12 +2109,25 @@ def render_privacy_policy():
 # ==========================================================
 def render_footer():
     links_html = ""
-    for label, url in SOCIAL_LINKS.items():
+    for label, info in SOCIAL_LINKS.items():
+        icon_class, url = info["icon"], info["url"]
+        badge_style = (
+            "display:inline-flex;align-items:center;justify-content:center;"
+            "width:38px;height:38px;border-radius:11px;border:1px solid var(--lp-line);"
+            "background:var(--lp-card);font-size:15px;"
+        )
         if url:
             links_html += (
-                f"<a href='{url}' target='_blank' style=\"color:var(--lp-muted);"
-                "text-decoration:none;padding:8px 14px;border:1px solid var(--lp-line);"
-                f"border-radius:10px;font-size:13px;\">{label}</a>"
+                f"<a href='{url}' target='_blank' title='{label}' "
+                f"style=\"{badge_style}color:var(--lp-blue);text-decoration:none;\">"
+                f"<i class='{icon_class}'></i></a>"
+            )
+        else:
+            # Placeholder so the footer looks complete before real links exist.
+            links_html += (
+                f"<span title='{label} — coming soon' "
+                f"style=\"{badge_style}color:var(--lp-muted);opacity:.4;cursor:default;\">"
+                f"<i class='{icon_class}'></i></span>"
             )
 
     contact_bits = []
