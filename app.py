@@ -436,9 +436,24 @@ footer { visibility: hidden; }
 [data-testid="stDecoration"] { display: none; }
 /* The sidebar's own open/collapse arrow must stay visible and clickable no
    matter what — it lives outside stToolbar/#MainMenu, but this rule is kept
-   explicit so a future Streamlit update hiding the header can't take it out. */
+   explicit so a future Streamlit update hiding the header can't take it out.
+   BUGFIX: with the sidebar collapsed by default, this arrow was the ONLY way
+   to reach the theme toggle — but sitting on a transparent header it was
+   nearly invisible (especially on the light theme), so people assumed the
+   toggle itself was broken when they simply couldn't find/see the sidebar.
+   Styled as an obvious blue button instead of a faint bare arrow. */
 [data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"] {
     visibility: visible !important; opacity: 1 !important;
+}
+[data-testid="collapsedControl"] button,
+[data-testid="stSidebarCollapsedControl"] button {
+    background: var(--lp-blue) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,.28) !important;
+}
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarCollapsedControl"] svg {
+    color: #ffffff !important; fill: #ffffff !important;
 }
 
 @media (max-width: 800px) {
